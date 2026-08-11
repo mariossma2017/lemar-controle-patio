@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>LEMAR — Controle de Pátio</title>
+<meta name="description" content="Caderno digital do controlador de pátio — LEMAR Logística e Transportes" />
+<meta name="theme-color" content="#1c1c1c" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="icons/icon.svg" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo-placeholder" id="logo-placeholder">LOGO<br />LEMAR</div>
+  <div class="app-header-titulo">
+    <h1>CONTROLE DE PÁTIO</h1>
+    <div class="unidade" id="header-unidade">—</div>
+  </div>
+  <div class="app-header-data">
+    <div id="header-data">--/--/----</div>
+    <div id="header-hora">--:--</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ===================== TELA HOME ===================== -->
+  <section class="tela ativa" id="tela-home">
+
+    <div class="busca-wrap">
+      <input type="text" class="busca-input" id="busca-input" placeholder="Digite a placa..." autocomplete="off" />
+      <div class="busca-resultados" id="busca-resultados"></div>
+    </div>
+
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card destaque">
+        <div class="valor" id="stat-no-patio">0</div>
+        <div class="rotulo">No Pátio</div>
+      </div>
+      <div class="stat-card">
+        <div class="valor" id="stat-disponiveis">0</div>
+        <div class="rotulo">Disponíveis</div>
+      </div>
+      <div class="stat-card">
+        <div class="valor" id="stat-na-doca">0</div>
+        <div class="rotulo">Na Doca</div>
+      </div>
+      <div class="stat-card">
+        <div class="valor" id="stat-aguardando">0</div>
+        <div class="rotulo">Aguardando</div>
+      </div>
+      <div class="stat-card">
+        <div class="valor" id="stat-indisponiveis">0</div>
+        <div class="rotulo">Indisponíveis</div>
+      </div>
+      <div class="stat-card">
+        <div class="valor" id="stat-chegadas-hoje">0</div>
+        <div class="rotulo">Chegadas Hoje</div>
+      </div>
+      <div class="stat-card" style="grid-column: span 2;">
+        <div class="valor" id="stat-saidas-hoje">0</div>
+        <div class="rotulo">Saídas Hoje</div>
+      </div>
+    </div>
+
+    <div class="acoes-principais">
+      <button class="btn btn-primario" id="btn-registrar-chegada">➕ REGISTRAR CHEGADA</button>
+      <button class="btn btn-secundario" id="btn-registrar-saida">🚚 REGISTRAR SAÍDA</button>
+      <button class="btn btn-outline" id="btn-ver-patio">📋 VER PÁTIO</button>
+    </div>
+
+  </section>
+
+  <!-- ===================== TELA PÁTIO ===================== -->
+  <section class="tela" id="tela-patio">
+    <div class="secao-titulo">Disponíveis</div>
+    <div class="lista-cards" id="lista-disponiveis"></div>
+
+    <div class="secao-titulo">Na Doca</div>
+    <div class="lista-cards" id="lista-na-doca"></div>
+
+    <div class="secao-titulo">Aguardando</div>
+    <div class="lista-cards" id="lista-aguardando"></div>
+
+    <div class="secao-titulo">Indisponíveis</div>
+    <div class="lista-cards" id="lista-indisponiveis"></div>
+  </section>
+
+  <!-- ===================== TELA DOCAS ===================== -->
+  <section class="tela" id="tela-docas">
+    <div class="secao-titulo">Docas</div>
+    <div class="docas-grid" id="docas-grid"></div>
+  </section>
+
+  <!-- ===================== TELA HISTÓRICO ===================== -->
+  <section class="tela" id="tela-historico">
+    <div class="secao-titulo">Movimentações</div>
+
+    <div class="filtros-historico" id="filtros-historico">
+      <button class="filtro-chip ativo" data-filtro="HOJE">Hoje</button>
+      <button class="filtro-chip" data-filtro="ONTEM">Ontem</button>
+      <button class="filtro-chip" data-filtro="TODAS">Todas</button>
+    </div>
+
+    <input type="text" class="filtro-busca-placa" id="filtro-busca-placa" placeholder="Filtrar por placa..." />
+
+    <div id="lista-historico"></div>
+  </section>
+
+  <!-- ===================== TELA TURNO ===================== -->
+  <section class="tela" id="tela-turno">
+    <div class="secao-titulo">Passagem de Turno</div>
+    <div class="resumo-turno-box">
+      <div class="resumo-turno-texto" id="resumo-turno-texto">Carregando resumo...</div>
+    </div>
+    <button class="btn btn-primario" id="btn-copiar-resumo">📋 COPIAR RESUMO</button>
+  </section>
+
+  <!-- ===================== TELA CONFIG ===================== -->
+  <section class="tela" id="tela-config">
+    <div class="secao-titulo">Configurações</div>
+
+    <div class="config-grupo">
+      <label for="config-unidade">Nome da Unidade</label>
+      <input type="text" id="config-unidade" placeholder="Ex: CD EMBU" />
+      <label for="config-docas">Quantidade de Docas</label>
+      <input type="number" id="config-docas" min="1" max="99" />
+      <button class="btn btn-secundario btn-bloco" id="btn-salvar-config">SALVAR CONFIGURAÇÕES</button>
+    </div>
+
+    <div class="config-grupo">
+      <label>Backup dos Dados</label>
+      <button class="btn btn-outline btn-bloco" id="btn-exportar-backup" style="margin-bottom: 10px;">⬇️ EXPORTAR BACKUP</button>
+      <button class="btn btn-outline btn-bloco" id="btn-restaurar-backup">⬆️ RESTAURAR BACKUP</button>
+      <input type="file" id="input-restaurar-backup" accept="application/json" style="display:none;" />
+    </div>
+
+    <div class="config-grupo">
+      <label>Aplicativo</label>
+      <button class="btn btn-primario btn-bloco" id="btn-instalar-app">📲 INSTALAR APLICATIVO</button>
+      <div class="config-versao">LEMAR Controle de Pátio — v1.0.0</div>
+    </div>
+  </section>
+
+</main>
+
+<nav class="app-nav" id="app-nav">
+  <button class="ativo" data-tela="tela-home"><span class="icone">🏠</span>Início</button>
+  <button data-tela="tela-patio"><span class="icone">📋</span>Pátio</button>
+  <button data-tela="tela-docas"><span class="icone">🚪</span>Docas</button>
+  <button data-tela="tela-historico"><span class="icone">🕒</span>Histórico</button>
+  <button data-tela="tela-turno"><span class="icone">📝</span>Turno</button>
+  <button data-tela="tela-config"><span class="icone">⚙️</span>Config</button>
+</nav>
+
+<!-- ===================== OVERLAY / MODAIS ===================== -->
+
+<div class="overlay" id="overlay-chegada">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Registrar Chegada</h2>
+      <button class="modal-fechar" data-fechar="overlay-chegada">&times;</button>
+    </div>
+
+    <div id="chegada-aviso-duplicidade"></div>
+
+    <div class="form-grupo">
+      <label for="chegada-placa">Placa da Carreta</label>
+      <input type="text" class="input-placa" id="chegada-placa" placeholder="ABC1D23" maxlength="8" />
+    </div>
+
+    <div class="form-grupo">
+      <label for="chegada-placa-cavalo">Placa do Cavalo <span class="opcional">(opcional)</span></label>
+      <input type="text" class="input-placa" id="chegada-placa-cavalo" placeholder="XYZ9A87" maxlength="8" />
+    </div>
+
+    <div class="form-grupo">
+      <label for="chegada-motorista">Motorista <span class="opcional">(opcional)</span></label>
+      <input type="text" id="chegada-motorista" placeholder="Nome do motorista" />
+    </div>
+
+    <div class="form-grupo">
+      <label>Condição</label>
+      <div class="opcoes-grid" id="chegada-condicao">
+        <button type="button" class="opcao-btn" data-valor="VAZIA">VAZIA</button>
+        <button type="button" class="opcao-btn" data-valor="CARREGADA">CARREGADA</button>
+      </div>
+    </div>
+
+    <div class="form-grupo">
+      <label>Localização Inicial</label>
+      <div class="opcoes-grid tres" id="chegada-localizacao">
+        <button type="button" class="opcao-btn" data-valor="PATIO">PÁTIO</button>
+        <button type="button" class="opcao-btn" data-valor="DOCA">DOCA</button>
+        <button type="button" class="opcao-btn" data-valor="AGUARDANDO">AGUARDANDO</button>
+      </div>
+    </div>
+
+    <div class="form-grupo" id="chegada-doca-wrap" style="display:none;">
+      <label for="chegada-doca-numero">Número da Doca</label>
+      <input type="text" id="chegada-doca-numero" placeholder="Ex: 03" />
+    </div>
+
+    <div class="form-grupo">
+      <label for="chegada-obs">Observação <span class="opcional">(opcional)</span></label>
+      <textarea class="input-obs" id="chegada-obs" placeholder="Observação..."></textarea>
+    </div>
+
+    <div class="form-acoes">
+      <button class="btn btn-outline" data-fechar="overlay-chegada">CANCELAR</button>
+      <button class="btn btn-primario" id="btn-confirmar-chegada">CONFIRMAR CHEGADA</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-saida">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Registrar Saída</h2>
+      <button class="modal-fechar" data-fechar="overlay-saida">&times;</button>
+    </div>
+
+    <div id="saida-aviso"></div>
+
+    <div class="form-grupo">
+      <label for="saida-placa">Placa da Carreta</label>
+      <input type="text" class="input-placa" id="saida-placa" placeholder="ABC1D23" maxlength="8" />
+    </div>
+
+    <div class="form-grupo">
+      <label>Condição</label>
+      <div class="opcoes-grid" id="saida-condicao">
+        <button type="button" class="opcao-btn" data-valor="VAZIA">VAZIA</button>
+        <button type="button" class="opcao-btn" data-valor="CARREGADA">CARREGADA</button>
+      </div>
+    </div>
+
+    <div class="form-grupo">
+      <label for="saida-placa-cavalo">Placa do Cavalo <span class="opcional">(opcional)</span></label>
+      <input type="text" class="input-placa" id="saida-placa-cavalo" placeholder="XYZ9A87" maxlength="8" />
+    </div>
+
+    <div class="form-grupo">
+      <label for="saida-motorista">Motorista <span class="opcional">(opcional)</span></label>
+      <input type="text" id="saida-motorista" placeholder="Nome do motorista" />
+    </div>
+
+    <div class="form-grupo">
+      <label for="saida-destino">Destino <span class="opcional">(opcional)</span></label>
+      <input type="text" id="saida-destino" placeholder="Destino da carga" />
+    </div>
+
+    <div class="form-acoes">
+      <button class="btn btn-outline" data-fechar="overlay-saida">CANCELAR</button>
+      <button class="btn btn-secundario" id="btn-confirmar-saida">CONFIRMAR SAÍDA</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-detalhes">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="detalhes-titulo">Placa</h2>
+      <button class="modal-fechar" data-fechar="overlay-detalhes">&times;</button>
+    </div>
+    <div id="detalhes-conteudo"></div>
+    <div class="detalhes-acoes" id="detalhes-acoes"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-doca-numero">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Mandar para Doca</h2>
+      <button class="modal-fechar" data-fechar="overlay-doca-numero">&times;</button>
+    </div>
+    <div class="form-grupo">
+      <label for="doca-numero-input">Número da Doca</label>
+      <input type="text" id="doca-numero-input" placeholder="Ex: 03" />
+    </div>
+    <div class="form-acoes">
+      <button class="btn btn-outline" data-fechar="overlay-doca-numero">CANCELAR</button>
+      <button class="btn btn-primario" id="btn-confirmar-doca">CONFIRMAR</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-indisponivel">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Tornar Indisponível</h2>
+      <button class="modal-fechar" data-fechar="overlay-indisponivel">&times;</button>
+    </div>
+    <div class="form-grupo">
+      <label>Motivo</label>
+      <div class="opcoes-grid" id="indisponivel-motivos">
+        <button type="button" class="opcao-btn" data-valor="PNEU">PNEU</button>
+        <button type="button" class="opcao-btn" data-valor="MANUTENÇÃO">MANUTENÇÃO</button>
+        <button type="button" class="opcao-btn" data-valor="AVARIA">AVARIA</button>
+        <button type="button" class="opcao-btn" data-valor="DOCUMENTAÇÃO">DOCUMENTAÇÃO</button>
+        <button type="button" class="opcao-btn" data-valor="OUTRO">OUTRO</button>
+      </div>
+    </div>
+    <div class="form-grupo" id="indisponivel-outro-wrap" style="display:none;">
+      <label for="indisponivel-outro-texto">Descreva o motivo</label>
+      <input type="text" id="indisponivel-outro-texto" placeholder="Motivo..." />
+    </div>
+    <div class="form-acoes">
+      <button class="btn btn-outline" data-fechar="overlay-indisponivel">CANCELAR</button>
+      <button class="btn btn-perigo" id="btn-confirmar-indisponivel">CONFIRMAR</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-editar">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Editar Carreta</h2>
+      <button class="modal-fechar" data-fechar="overlay-editar">&times;</button>
+    </div>
+    <div class="form-grupo">
+      <label for="editar-placa-cavalo">Placa do Cavalo</label>
+      <input type="text" class="input-placa" id="editar-placa-cavalo" maxlength="8" />
+    </div>
+    <div class="form-grupo">
+      <label for="editar-motorista">Motorista</label>
+      <input type="text" id="editar-motorista" />
+    </div>
+    <div class="form-grupo">
+      <label for="editar-obs">Observação</label>
+      <textarea class="input-obs" id="editar-obs"></textarea>
+    </div>
+    <div class="form-acoes">
+      <button class="btn btn-outline" data-fechar="overlay-editar">CANCELAR</button>
+      <button class="btn btn-primario" id="btn-confirmar-editar">SALVAR</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-confirm">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="confirm-titulo">Confirmar</h2>
+      <button class="modal-fechar" data-fechar="overlay-confirm">&times;</button>
+    </div>
+    <div class="confirm-texto" id="confirm-texto"></div>
+    <div class="form-acoes">
+      <button class="btn btn-outline" data-fechar="overlay-confirm">CANCELAR</button>
+      <button class="btn btn-perigo" id="btn-confirmar-confirm">CONFIRMAR</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/db.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
