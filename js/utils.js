@@ -1,44 +1,58 @@
 /* LEMAR Controle de Pátio — utilitários */
 
-const STATUS = {
-  DISPONIVEL: 'DISPONIVEL',
-  NA_DOCA: 'NA_DOCA',
-  AGUARDANDO: 'AGUARDANDO',
-  INDISPONIVEL: 'INDISPONIVEL',
-  FORA_DO_PATIO: 'FORA_DO_PATIO',
-};
-
-const STATUS_LABEL = {
-  DISPONIVEL: 'DISPONÍVEL',
-  NA_DOCA: 'NA DOCA',
-  AGUARDANDO: 'AGUARDANDO',
-  INDISPONIVEL: 'INDISPONÍVEL',
-  FORA_DO_PATIO: 'FORA DO PÁTIO',
-};
-
-const CONDICAO = {
+const SITUACAO = {
   VAZIA: 'VAZIA',
   CARREGADA: 'CARREGADA',
+  CARREGANDO: 'CARREGANDO',
+  INSUMOS: 'INSUMOS',
+};
+
+const SITUACAO_LABEL = {
+  VAZIA: 'VAZIA',
+  CARREGADA: 'CARREGADA',
+  CARREGANDO: 'CARREGANDO',
+  INSUMOS: 'INSUMOS',
+};
+
+const LOCALIZACAO = {
+  PATIO: 'PATIO',
+  DOCA: 'DOCA',
+  DOCA_MORTA: 'DOCA_MORTA',
+  LATERAL: 'LATERAL',
+  OBLIQUO: 'OBLIQUO',
+  LATERAL_OBLIQUO: 'LATERAL_OBLIQUO',
+  BOLSAO: 'BOLSAO',
+  OUTRO: 'OUTRO',
+};
+
+const LOCALIZACAO_LABEL = {
+  PATIO: 'PÁTIO',
+  DOCA: 'DOCA',
+  DOCA_MORTA: 'DOCA MORTA',
+  LATERAL: 'LATERAL',
+  OBLIQUO: 'OBLÍQUO',
+  LATERAL_OBLIQUO: 'LATERAL OBLÍQUO',
+  BOLSAO: 'BOLSÃO',
+  OUTRO: 'OUTRO',
+};
+
+const LOCALIZACAO_TEXTO_MENSAGEM = {
+  PATIO: 'pátio',
+  DOCA_MORTA: 'doca morta',
+  LATERAL: 'lateral',
+  OBLIQUO: 'oblíquo',
+  LATERAL_OBLIQUO: 'lateral oblíquo',
+  BOLSAO: 'bolsão',
 };
 
 const TIPO_MOVIMENTO = {
   CHEGADA: 'CHEGADA',
+  SITUACAO: 'SITUACAO',
+  LOCALIZACAO: 'LOCALIZACAO',
+  CAVALO: 'CAVALO',
   SAIDA: 'SAIDA',
-  DISPONIVEL: 'DISPONIVEL',
-  DOCA: 'DOCA',
-  AGUARDANDO: 'AGUARDANDO',
-  INDISPONIVEL: 'INDISPONIVEL',
   EDICAO: 'EDICAO',
-};
-
-const TIPO_MOVIMENTO_LABEL = {
-  CHEGADA: 'CHEGADA',
-  SAIDA: 'SAÍDA',
-  DISPONIVEL: 'DISPONÍVEL',
-  DOCA: 'MOVIDA PARA DOCA',
-  AGUARDANDO: 'AGUARDANDO',
-  INDISPONIVEL: 'INDISPONÍVEL',
-  EDICAO: 'EDITADA',
+  CAVALO_AVULSO: 'CAVALO_AVULSO',
 };
 
 function normalizarPlaca(valor) {
@@ -78,19 +92,26 @@ function ehHoje(timestamp) {
   );
 }
 
-function ehOntem(timestamp) {
-  const ontem = new Date();
-  ontem.setDate(ontem.getDate() - 1);
-  const d = new Date(timestamp);
-  return (
-    d.getDate() === ontem.getDate() &&
-    d.getMonth() === ontem.getMonth() &&
-    d.getFullYear() === ontem.getFullYear()
-  );
+/* texto de localização usado na tela (ex.: "Doca 12", "Lateral", "Outro: Fundos") */
+function localizacaoTextoTela(entidade) {
+  if (entidade.localizacao === LOCALIZACAO.DOCA) {
+    return `Doca ${entidade.doca}`;
+  }
+  if (entidade.localizacao === LOCALIZACAO.OUTRO) {
+    return entidade.localizacaoOutroTexto ? entidade.localizacaoOutroTexto : 'Outro';
+  }
+  return LOCALIZACAO_LABEL[entidade.localizacao] || entidade.localizacao;
 }
 
-function gerarId() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+/* texto de localização usado na mensagem de Atualização Pátio (ex.: "doca 12", "bolsão") */
+function localizacaoTextoMensagem(entidade) {
+  if (entidade.localizacao === LOCALIZACAO.DOCA) {
+    return `doca ${entidade.doca}`;
+  }
+  if (entidade.localizacao === LOCALIZACAO.OUTRO) {
+    return (entidade.localizacaoOutroTexto || 'outro').toLowerCase();
+  }
+  return LOCALIZACAO_TEXTO_MENSAGEM[entidade.localizacao] || '';
 }
 
 async function copiarParaAreaTransferencia(texto) {

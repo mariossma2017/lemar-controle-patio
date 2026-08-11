@@ -1,6 +1,6 @@
 /* LEMAR Controle de Pátio — Service Worker (offline-first) */
 
-const CACHE_VERSION = 'lemar-patio-v1';
+const CACHE_VERSION = 'lemar-patio-v2';
 
 const ARQUIVOS_ESSENCIAIS = [
   './',

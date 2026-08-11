@@ -6,29 +6,29 @@ Aplicativo PWA desenvolvido para simplificar o controle operacional de carretas 
 
 ## Objetivo
 
-Permitir que o controlador de pátio, em poucos segundos, consiga:
+Permitir que o controlador de pátio, em poucos segundos, saiba:
 
-- Registrar a chegada de uma carreta.
-- Registrar a saída de uma carreta.
-- Alterar o status de uma carreta (disponível, na doca, aguardando, indisponível).
-- Mandar uma carreta para uma doca.
-- Consultar quais carretas estão disponíveis.
-- Buscar uma carreta pela placa.
-- Consultar o histórico de movimentações.
-- Gerar e copiar uma passagem de turno para o WhatsApp.
+- Quais carretas estão no pátio, vazias, carregadas, carregando ou com insumos.
+- Quais estão com cavalo e quais estão sem cavalo.
+- Onde cada carreta está (pátio, doca, doca morta, lateral, oblíquo, lateral oblíquo, bolsão ou outro).
+- Quais carretas estão em cada doca.
+- Quais cavalos estão sozinhos no pátio.
+- Quais veículos chegaram e quais saíram.
+
+E que consiga gerar, em segundos, a atualização de pátio que hoje é enviada manualmente pelo WhatsApp.
 
 ## Funcionalidades
 
-- **Dashboard** com indicadores em tempo real: carretas no pátio, disponíveis, na doca, aguardando, indisponíveis, chegadas e saídas do dia.
-- **Busca instantânea** por placa, com resultado enquanto o usuário digita.
-- **Registro de chegada** com placa, condição (vazia/carregada), localização inicial (pátio, doca ou aguardando) e observação opcional.
-- **Registro de saída** com condição, destino e dados opcionais do motorista/cavalo.
-- **Controle de status**: disponível, na doca, aguardando, indisponível (com motivo) e fora do pátio.
-- **Painel de docas**, mostrando rapidamente quais estão ocupadas e quais estão livres.
-- **Histórico de movimentações** com filtros por hoje, ontem, todas e por placa — inclusive o histórico individual de cada carreta.
-- **Passagem de turno** gerada automaticamente, pronta para copiar e colar no WhatsApp.
+- **Dashboard** com indicadores em tempo real: total no pátio, em doca, vazias, carregadas, carregando, com insumos, com cavalo e sem cavalo.
+- **Busca instantânea** por placa — de carreta ou de cavalo — com resultado enquanto o usuário digita.
+- **Nova Chegada / Cadastro da Carreta**: placa, situação (vazia/carregada/carregando/insumos), se está com cavalo (com validação para não vincular o mesmo cavalo a duas carretas) e localização.
+- **Ações rápidas por carreta**: alterar situação, alterar cavalo, alterar localização, registrar saída e editar — tudo em janelas simples, sem telas extras.
+- **Cavalo no Pátio**: registro de cavalos sozinhos no pátio (sem carreta vinculada), removidos automaticamente da lista assim que forem associados a uma carreta.
+- **Painel de docas**, mostrando rapidamente qual carreta está em cada doca e quais estão livres.
+- **Histórico de hoje** com todas as movimentações, filtrável por placa.
+- **Atualização Pátio**: gera automaticamente a mensagem no formato usado pela operação (carretas vazias/carregadas/carregando com e sem cavalo, com insumos, e cavalos no pátio), pronta para copiar e colar no WhatsApp.
 - **Backup e restauração** dos dados em arquivo JSON.
-- **Proteção contra duplicidade**: o app avisa se uma carreta já consta no pátio antes de registrar uma nova chegada.
+- **Validações essenciais**: carreta duplicada, cavalo vinculado a duas carretas, doca ocupada, campos obrigatórios (placa do cavalo quando "com cavalo", número da doca quando "doca").
 
 ## Como acessar
 
@@ -43,15 +43,14 @@ Abra a URL do GitHub Pages do projeto em qualquer navegador (celular ou computad
 ## Como utilizar
 
 1. Abra o aplicativo — a tela inicial mostra o resumo do pátio.
-2. Carreta chegou → **REGISTRAR CHEGADA**.
-3. Carreta foi para a doca → abra a carreta e toque em **MANDAR PARA DOCA**.
-4. Carreta ficou disponível → **TORNAR DISPONÍVEL**.
-5. Carreta saiu → **REGISTRAR SAÍDA**.
-6. No fim do turno, abra **Turno** e toque em **COPIAR RESUMO** para colar no WhatsApp.
+2. Carreta chegou → **NOVA CHEGADA** → placa → situação → cavalo → localização → **SALVAR**.
+3. Algo mudou (situação, cavalo ou localização) → busque a placa, toque na carreta e escolha a ação rápida correspondente.
+4. Carreta saiu → toque na carreta → **REGISTRAR SAÍDA**.
+5. Na hora de passar a atualização → **ATUALIZAÇÃO PÁTIO** → **COPIAR ATUALIZAÇÃO** → colar no WhatsApp.
 
 ## Armazenamento local
 
-Todos os dados operacionais (carretas, movimentações e configurações) são armazenados **localmente no dispositivo**, usando **IndexedDB**. Nenhum dado é enviado para o GitHub ou para qualquer servidor externo — o repositório hospeda apenas o código do aplicativo.
+Todos os dados operacionais (carretas, cavalos avulsos, movimentações e configurações) são armazenados **localmente no dispositivo**, usando **IndexedDB**. Nenhum dado é enviado para o GitHub ou para qualquer servidor externo — o repositório hospeda apenas o código do aplicativo.
 
 ## Modo offline
 
@@ -59,7 +58,7 @@ O aplicativo funciona como **PWA offline-first**. Depois do primeiro acesso, um 
 
 ## Backup
 
-Em **Configurações → Exportar Backup**, o aplicativo gera um arquivo `lemar-patio-backup-AAAA-MM-DD.json` contendo todas as carretas, movimentações e configurações.
+Em **Configurações → Exportar Backup**, o aplicativo gera um arquivo `lemar-patio-backup-AAAA-MM-DD.json` contendo todas as carretas, cavalos avulsos, movimentações e configurações.
 
 ## Restauração de backup
 
@@ -76,7 +75,7 @@ Em **Configurações → Restaurar Backup**, selecione um arquivo de backup expo
 │   └── style.css         # identidade visual Lemar
 ├── js/
 │   ├── db.js              # camada de dados (IndexedDB)
-│   ├── utils.js            # utilitários (datas, placas, etc.)
+│   ├── utils.js            # utilitários (datas, placas, textos de localização)
 │   └── app.js               # lógica da aplicação e telas
 ├── icons/
 │   └── icon.svg           # espaço reservado para o logotipo oficial
@@ -89,4 +88,4 @@ O cabeçalho está preparado com um espaço reservado (`LOGO LEMAR`). Assim que 
 
 ## Status desta versão
 
-Primeira versão: 100% local, sem backend, sem login, sem sincronização em nuvem. A estrutura de dados foi organizada para permitir evoluções futuras (sincronização, múltiplos usuários, múltiplas unidades) sem necessidade de reescrever o aplicativo.
+100% local, sem backend, sem login, sem sincronização em nuvem. A estrutura de dados foi organizada para permitir evoluções futuras (sincronização, múltiplos usuários, múltiplas unidades) sem necessidade de reescrever o aplicativo.

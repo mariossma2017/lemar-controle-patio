@@ -3,15 +3,27 @@
 let configUnidade = '';
 let configQuantidadeDocas = 10;
 
-let selecaoChegadaCondicao = null;
+/* seleções ativas nos formulários */
+let selecaoChegadaSituacao = null;
+let selecaoChegadaInsumo = null;
+let selecaoChegadaTemCavalo = null;
 let selecaoChegadaLocalizacao = null;
-let selecaoSaidaCondicao = null;
-let selecaoIndisponivelMotivo = null;
 
-let contextoDocaPlaca = null;
-let contextoIndisponivelPlaca = null;
-let contextoEditarPlaca = null;
+let selecaoAlterarSituacao = null;
+let selecaoAlterarSituacaoInsumo = null;
+let selecaoAlterarCavalo = null;
+let selecaoAlterarLocalizacao = null;
+let selecaoCavaloAvulsoLocalizacao = null;
+
+/* contextos (placa em edição) */
 let contextoDetalhesPlaca = null;
+let contextoDetalhesTipo = 'carreta';
+let contextoSaidaPlaca = null;
+let contextoEditarPlaca = null;
+let contextoAlterarSituacaoPlaca = null;
+let contextoAlterarCavaloPlaca = null;
+let contextoLocalizacaoAlvo = { placa: null, tipo: 'carreta' };
+
 let confirmCallback = null;
 
 let filtroHistoricoAtivo = 'HOJE';
@@ -30,15 +42,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   ligarBusca();
   ligarAcoesPrincipais();
   ligarModalChegada();
+  ligarModalAlterarSituacao();
+  ligarModalAlterarCavalo();
+  ligarModalAlterarLocalizacao();
   ligarModalSaida();
-  ligarModalDetalhes();
-  ligarModalDocaNumero();
-  ligarModalIndisponivel();
   ligarModalEditar();
+  ligarModalCavaloAvulso();
   ligarModalConfirm();
   ligarFechamentoOverlays();
   ligarHistorico();
-  ligarTurno();
+  ligarAtualizacaoPatio();
   ligarConfig();
   ligarInstalacaoPWA();
 
@@ -62,8 +75,9 @@ function atualizarRelogio() {
 
 async function atualizarTudo() {
   const carretas = await DB.carretaListarTodas();
+  const cavalosAvulsos = await DB.cavaloAvulsoListarTodos();
   atualizarDashboard(carretas);
-  renderPatio(carretas);
+  renderPatio(carretas, cavalosAvulsos);
   renderDocas(carretas);
   await renderHistorico();
 }
@@ -92,8 +106,8 @@ async function trocarTela(idTela) {
   if (idTela === 'tela-historico') {
     await renderHistorico();
   }
-  if (idTela === 'tela-turno') {
-    await renderResumoTurno();
+  if (idTela === 'tela-atualizacao') {
+    await renderAtualizacaoPatio();
   }
 }
 
@@ -151,28 +165,64 @@ function ligarModalConfirm() {
 }
 
 /* ============================================================
+   PICKERS GENÉRICOS (botões de opção)
+   ============================================================ */
+
+function configurarPickerSimples(containerId, aoSelecionar) {
+  document.querySelectorAll(`#${containerId} .opcao-btn`).forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll(`#${containerId} .opcao-btn`).forEach((b) => b.classList.remove('selecionado'));
+      btn.classList.add('selecionado');
+      aoSelecionar(btn.dataset.valor);
+    });
+  });
+}
+
+function selecionarOpcao(containerId, valor) {
+  document.querySelectorAll(`#${containerId} .opcao-btn`).forEach((b) => {
+    b.classList.toggle('selecionado', b.dataset.valor === valor);
+  });
+}
+
+function configurarPickerSituacao(containerId, insumoWrapId, aoSelecionar) {
+  configurarPickerSimples(containerId, (valor) => {
+    document.getElementById(insumoWrapId).style.display = valor === 'INSUMOS' ? 'block' : 'none';
+    aoSelecionar(valor);
+  });
+}
+
+function configurarPickerInsumo(containerId, outroInputId, aoSelecionar) {
+  configurarPickerSimples(containerId, (valor) => {
+    document.getElementById(outroInputId).style.display = valor === 'OUTRO' ? 'block' : 'none';
+    aoSelecionar(valor);
+  });
+}
+
+function configurarPickerLocalizacao(containerId, docaWrapId, outroWrapId, aoSelecionar) {
+  configurarPickerSimples(containerId, (valor) => {
+    document.getElementById(docaWrapId).style.display = valor === 'DOCA' ? 'block' : 'none';
+    document.getElementById(outroWrapId).style.display = valor === 'OUTRO' ? 'block' : 'none';
+    aoSelecionar(valor);
+  });
+}
+
+/* ============================================================
    DASHBOARD
    ============================================================ */
 
 function atualizarDashboard(carretas) {
-  const noPatio = carretas.filter((c) => c.status !== STATUS.FORA_DO_PATIO);
-  const disponiveis = noPatio.filter((c) => c.status === STATUS.DISPONIVEL);
-  const naDoca = noPatio.filter((c) => c.status === STATUS.NA_DOCA);
-  const aguardando = noPatio.filter((c) => c.status === STATUS.AGUARDANDO);
-  const indisponiveis = noPatio.filter((c) => c.status === STATUS.INDISPONIVEL);
+  const ativas = carretas.filter((c) => c.presente);
 
-  const chegadasHoje = carretas.filter((c) => c.chegadaTimestamp && ehHoje(c.chegadaTimestamp)).length;
-  const saidasHoje = carretas.filter(
-    (c) => c.status === STATUS.FORA_DO_PATIO && c.saidaTimestamp && ehHoje(c.saidaTimestamp)
-  ).length;
+  const contar = (pred) => ativas.filter(pred).length;
 
-  document.getElementById('stat-no-patio').textContent = noPatio.length;
-  document.getElementById('stat-disponiveis').textContent = disponiveis.length;
-  document.getElementById('stat-na-doca').textContent = naDoca.length;
-  document.getElementById('stat-aguardando').textContent = aguardando.length;
-  document.getElementById('stat-indisponiveis').textContent = indisponiveis.length;
-  document.getElementById('stat-chegadas-hoje').textContent = chegadasHoje;
-  document.getElementById('stat-saidas-hoje').textContent = saidasHoje;
+  document.getElementById('stat-total-patio').textContent = ativas.length;
+  document.getElementById('stat-em-doca').textContent = contar((c) => c.localizacao === LOCALIZACAO.DOCA);
+  document.getElementById('stat-vazias').textContent = contar((c) => c.situacao === SITUACAO.VAZIA);
+  document.getElementById('stat-carregadas').textContent = contar((c) => c.situacao === SITUACAO.CARREGADA);
+  document.getElementById('stat-carregando').textContent = contar((c) => c.situacao === SITUACAO.CARREGANDO);
+  document.getElementById('stat-insumos').textContent = contar((c) => c.situacao === SITUACAO.INSUMOS);
+  document.getElementById('stat-com-cavalo').textContent = contar((c) => c.temCavalo);
+  document.getElementById('stat-sem-cavalo').textContent = contar((c) => !c.temCavalo);
 }
 
 /* ============================================================
@@ -187,37 +237,44 @@ function ligarBusca() {
     resultadosEl.innerHTML = '';
     if (!termo) return;
 
-    const carretas = await DB.carretaListarTodas();
-    const encontrados = carretas
-      .filter((c) => c.placa.includes(termo))
-      .sort((a, b) => a.placa.localeCompare(b.placa))
-      .slice(0, 8);
+    const carretas = (await DB.carretaListarTodas()).filter((c) => c.presente);
+    const cavalosAvulsos = await DB.cavaloAvulsoListarTodos();
 
-    if (encontrados.length === 0) {
-      resultadosEl.innerHTML = '<div class="vazio-msg">Nenhuma carreta encontrada.</div>';
+    const porPlacaCarreta = carretas.filter((c) => c.placa.includes(termo));
+    const porCavaloNaCarreta = carretas.filter(
+      (c) => c.temCavalo && c.placaCavalo.includes(termo) && !porPlacaCarreta.includes(c)
+    );
+    const porCavaloAvulso = cavalosAvulsos.filter((c) => c.placa.includes(termo));
+
+    const encontrados = [...porPlacaCarreta, ...porCavaloNaCarreta].slice(0, 6);
+    const encontradosCavalos = porCavaloAvulso.slice(0, 4);
+
+    if (encontrados.length === 0 && encontradosCavalos.length === 0) {
+      resultadosEl.innerHTML = '<div class="vazio-msg">Nenhum resultado encontrado.</div>';
       return;
     }
 
-    encontrados.forEach((c) => {
-      resultadosEl.appendChild(criarCardCarreta(c));
-    });
+    encontrados.forEach((c) => resultadosEl.appendChild(criarCardCarreta(c)));
+    encontradosCavalos.forEach((c) => resultadosEl.appendChild(criarCardCavaloAvulso(c)));
   });
 }
 
 /* ============================================================
-   CARD DE CARRETA
+   CARDS
    ============================================================ */
 
 function criarCardCarreta(carreta) {
   const div = document.createElement('div');
-  const statusCss = carreta.status.toLowerCase();
-  div.className = `card-carreta borda-${statusCss}`;
+  const situacaoCss = carreta.situacao.toLowerCase();
+  div.className = `card-carreta borda-${situacaoCss}`;
 
   const meta = [];
-  meta.push(carreta.condicao === CONDICAO.CARREGADA ? 'CARREGADA' : 'VAZIA');
-  if (carreta.status === STATUS.NA_DOCA && carreta.doca) {
-    meta.push(`Doca ${carreta.doca}`);
+  if (carreta.temCavalo && carreta.placaCavalo) {
+    meta.push(`Cavalo: ${carreta.placaCavalo}`);
+  } else {
+    meta.push('Sem cavalo');
   }
+  meta.push(localizacaoTextoTela(carreta));
   const desde = carreta.ultimaMovimentacaoTimestamp || carreta.chegadaTimestamp;
   meta.push(`Desde ${formatarHora(desde)}`);
 
@@ -227,10 +284,29 @@ function criarCardCarreta(carreta) {
       <div class="meta">${meta.join(' · ')}</div>
     </div>
     <div class="lado-direito">
-      <span class="badge badge-${statusCss}">${STATUS_LABEL[carreta.status]}</span>
+      <span class="badge badge-${situacaoCss}">${SITUACAO_LABEL[carreta.situacao]}</span>
     </div>
   `;
-  div.addEventListener('click', () => abrirDetalhes(carreta.placa));
+  div.addEventListener('click', () => abrirDetalhes(carreta.placa, 'carreta'));
+  return div;
+}
+
+function criarCardCavaloAvulso(cavalo) {
+  const div = document.createElement('div');
+  div.className = 'card-carreta borda-avulso';
+
+  const meta = [localizacaoTextoTela(cavalo), `Desde ${formatarHora(cavalo.ultimaMovimentacaoTimestamp || cavalo.criadoEm)}`];
+
+  div.innerHTML = `
+    <div class="info-principal">
+      <div class="placa">${cavalo.placa}</div>
+      <div class="meta">${meta.join(' · ')}</div>
+    </div>
+    <div class="lado-direito">
+      <span class="badge badge-avulso">CAVALO</span>
+    </div>
+  `;
+  div.addEventListener('click', () => abrirDetalhes(cavalo.placa, 'cavalo'));
   return div;
 }
 
@@ -238,27 +314,30 @@ function criarCardCarreta(carreta) {
    TELA PÁTIO
    ============================================================ */
 
-function renderPatio(carretas) {
-  const grupos = {
-    [STATUS.DISPONIVEL]: document.getElementById('lista-disponiveis'),
-    [STATUS.NA_DOCA]: document.getElementById('lista-na-doca'),
-    [STATUS.AGUARDANDO]: document.getElementById('lista-aguardando'),
-    [STATUS.INDISPONIVEL]: document.getElementById('lista-indisponiveis'),
-  };
+function renderPatio(carretas, cavalosAvulsos) {
+  const listaCarretas = document.getElementById('lista-carretas-patio');
+  const listaCavalos = document.getElementById('lista-cavalos-patio');
 
-  Object.values(grupos).forEach((el) => (el.innerHTML = ''));
+  const ativas = carretas
+    .filter((c) => c.presente)
+    .sort((a, b) => (b.ultimaMovimentacaoTimestamp || 0) - (a.ultimaMovimentacaoTimestamp || 0));
 
-  Object.keys(grupos).forEach((status) => {
-    const lista = carretas
-      .filter((c) => c.status === status)
-      .sort((a, b) => (b.ultimaMovimentacaoTimestamp || 0) - (a.ultimaMovimentacaoTimestamp || 0));
-    const container = grupos[status];
-    if (lista.length === 0) {
-      container.innerHTML = '<div class="vazio-msg">Nenhuma carreta.</div>';
-    } else {
-      lista.forEach((c) => container.appendChild(criarCardCarreta(c)));
-    }
-  });
+  listaCarretas.innerHTML = '';
+  if (ativas.length === 0) {
+    listaCarretas.innerHTML = '<div class="vazio-msg">Nenhuma carreta no pátio.</div>';
+  } else {
+    ativas.forEach((c) => listaCarretas.appendChild(criarCardCarreta(c)));
+  }
+
+  const cavalosOrdenados = [...cavalosAvulsos].sort(
+    (a, b) => (b.ultimaMovimentacaoTimestamp || 0) - (a.ultimaMovimentacaoTimestamp || 0)
+  );
+  listaCavalos.innerHTML = '';
+  if (cavalosOrdenados.length === 0) {
+    listaCavalos.innerHTML = '<div class="vazio-msg">Nenhum cavalo avulso no pátio.</div>';
+  } else {
+    cavalosOrdenados.forEach((c) => listaCavalos.appendChild(criarCardCavaloAvulso(c)));
+  }
 }
 
 /* ============================================================
@@ -271,7 +350,7 @@ function renderDocas(carretas) {
 
   const ocupantesPorDoca = {};
   carretas
-    .filter((c) => c.status === STATUS.NA_DOCA && c.doca)
+    .filter((c) => c.presente && c.localizacao === LOCALIZACAO.DOCA && c.doca)
     .forEach((c) => {
       ocupantesPorDoca[String(c.doca).toUpperCase()] = c;
     });
@@ -286,7 +365,7 @@ function renderDocas(carretas) {
       <div class="doca-ocupante">${ocupante ? ocupante.placa : 'LIVRE'}</div>
     `;
     if (ocupante) {
-      div.addEventListener('click', () => abrirDetalhes(ocupante.placa));
+      div.addEventListener('click', () => abrirDetalhes(ocupante.placa, 'carreta'));
     }
     grid.appendChild(div);
   }
@@ -297,27 +376,43 @@ function renderDocas(carretas) {
    ============================================================ */
 
 function ligarAcoesPrincipais() {
-  document.getElementById('btn-registrar-chegada').addEventListener('click', () => abrirModalChegada());
-  document.getElementById('btn-registrar-saida').addEventListener('click', () => abrirModalSaida());
+  document.getElementById('btn-nova-chegada').addEventListener('click', () => abrirModalChegada('Nova Chegada'));
   document.getElementById('btn-ver-patio').addEventListener('click', () => trocarTela('tela-patio'));
+  document.getElementById('btn-atualizacao-patio').addEventListener('click', () => trocarTela('tela-atualizacao'));
+  document
+    .getElementById('btn-cadastro-carreta')
+    .addEventListener('click', () => abrirModalChegada('Cadastro da Carreta'));
+  document.getElementById('btn-cavalo-no-patio').addEventListener('click', () => abrirModalCavaloAvulso());
 }
 
 /* ============================================================
-   MODAL — REGISTRAR CHEGADA
+   MODAL — NOVA CHEGADA / CADASTRO DA CARRETA
    ============================================================ */
 
-function abrirModalChegada(placaPredefinida) {
-  document.getElementById('chegada-placa').value = placaPredefinida || '';
+function abrirModalChegada(titulo) {
+  document.getElementById('chegada-titulo').textContent = titulo || 'Nova Chegada';
+  document.getElementById('chegada-placa').value = '';
   document.getElementById('chegada-placa-cavalo').value = '';
-  document.getElementById('chegada-motorista').value = '';
-  document.getElementById('chegada-obs').value = '';
   document.getElementById('chegada-doca-numero').value = '';
+  document.getElementById('chegada-localizacao-outro-texto').value = '';
+  document.getElementById('chegada-insumo-outro-texto').value = '';
+  document.getElementById('chegada-insumo-outro-texto').style.display = 'none';
+  document.getElementById('chegada-insumo-wrap').style.display = 'none';
+  document.getElementById('chegada-placa-cavalo-wrap').style.display = 'none';
   document.getElementById('chegada-doca-wrap').style.display = 'none';
+  document.getElementById('chegada-localizacao-outro-wrap').style.display = 'none';
   document.getElementById('chegada-aviso-duplicidade').innerHTML = '';
-  selecaoChegadaCondicao = null;
+  document.getElementById('chegada-aviso-cavalo').innerHTML = '';
+
+  selecaoChegadaSituacao = null;
+  selecaoChegadaInsumo = null;
+  selecaoChegadaTemCavalo = null;
   selecaoChegadaLocalizacao = null;
-  document.querySelectorAll('#chegada-condicao .opcao-btn').forEach((b) => b.classList.remove('selecionado'));
-  document.querySelectorAll('#chegada-localizacao .opcao-btn').forEach((b) => b.classList.remove('selecionado'));
+
+  ['chegada-situacao', 'chegada-insumo-opcoes', 'chegada-tem-cavalo', 'chegada-localizacao'].forEach((id) => {
+    document.querySelectorAll(`#${id} .opcao-btn`).forEach((b) => b.classList.remove('selecionado'));
+  });
+
   abrirOverlay('overlay-chegada');
 }
 
@@ -328,22 +423,34 @@ function ligarModalChegada() {
     verificarDuplicidadeChegada();
   });
 
-  document.querySelectorAll('#chegada-condicao .opcao-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#chegada-condicao .opcao-btn').forEach((b) => b.classList.remove('selecionado'));
-      btn.classList.add('selecionado');
-      selecaoChegadaCondicao = btn.dataset.valor;
-    });
+  configurarPickerSituacao('chegada-situacao', 'chegada-insumo-wrap', (valor) => {
+    selecaoChegadaSituacao = valor;
   });
 
-  document.querySelectorAll('#chegada-localizacao .opcao-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#chegada-localizacao .opcao-btn').forEach((b) => b.classList.remove('selecionado'));
-      btn.classList.add('selecionado');
-      selecaoChegadaLocalizacao = btn.dataset.valor;
-      document.getElementById('chegada-doca-wrap').style.display =
-        selecaoChegadaLocalizacao === 'DOCA' ? 'block' : 'none';
-    });
+  configurarPickerInsumo('chegada-insumo-opcoes', 'chegada-insumo-outro-texto', (valor) => {
+    selecaoChegadaInsumo = valor;
+  });
+
+  configurarPickerSimples('chegada-tem-cavalo', (valor) => {
+    selecaoChegadaTemCavalo = valor;
+    document.getElementById('chegada-placa-cavalo-wrap').style.display = valor === 'SIM' ? 'block' : 'none';
+  });
+
+  const placaCavaloInput = document.getElementById('chegada-placa-cavalo');
+  placaCavaloInput.addEventListener('input', async () => {
+    placaCavaloInput.value = normalizarPlaca(placaCavaloInput.value);
+    const avisoEl = document.getElementById('chegada-aviso-cavalo');
+    avisoEl.innerHTML = '';
+    const placaCavalo = placaCavaloInput.value;
+    if (placaCavalo.length < 6) return;
+    const conflito = await encontrarCarretaComCavalo(placaCavalo, null);
+    if (conflito) {
+      avisoEl.innerHTML = `<div class="aviso-box">Este cavalo já está vinculado à carreta ${conflito.placa}.</div>`;
+    }
+  });
+
+  configurarPickerLocalizacao('chegada-localizacao', 'chegada-doca-wrap', 'chegada-localizacao-outro-wrap', (valor) => {
+    selecaoChegadaLocalizacao = valor;
   });
 
   document.getElementById('btn-confirmar-chegada').addEventListener('click', onConfirmarChegada);
@@ -356,21 +463,39 @@ async function verificarDuplicidadeChegada() {
   if (placa.length < 6) return;
 
   const existente = await DB.carretaBuscarPorPlaca(placa);
-  if (existente && existente.status !== STATUS.FORA_DO_PATIO) {
+  if (existente && existente.presente) {
     avisoEl.innerHTML = `
       <div class="aviso-box">
         Esta carreta já consta no pátio.<br />
         Placa: <strong>${existente.placa}</strong><br />
-        Status atual: <strong>${STATUS_LABEL[existente.status]}</strong><br />
-        Última movimentação: <strong>${formatarDataHora(existente.ultimaMovimentacaoTimestamp || existente.chegadaTimestamp)}</strong>
+        Situação: <strong>${SITUACAO_LABEL[existente.situacao]}</strong><br />
+        Localização: <strong>${localizacaoTextoTela(existente)}</strong>
       </div>
       <button type="button" class="btn btn-outline btn-bloco" id="btn-ver-carreta-duplicada" style="margin-bottom:14px;">VER CARRETA</button>
     `;
     document.getElementById('btn-ver-carreta-duplicada').addEventListener('click', () => {
       fecharOverlay('overlay-chegada');
-      abrirDetalhes(existente.placa);
+      abrirDetalhes(existente.placa, 'carreta');
     });
   }
+}
+
+async function encontrarCarretaComCavalo(placaCavalo, placaIgnorar) {
+  const carretas = await DB.carretaListarTodas();
+  return (
+    carretas.find(
+      (c) => c.presente && c.temCavalo && c.placaCavalo === placaCavalo && c.placa !== placaIgnorar
+    ) || null
+  );
+}
+
+async function encontrarOcupanteDaDoca(numeroDoca, placaIgnorar) {
+  const carretas = await DB.carretaListarTodas();
+  return (
+    carretas.find(
+      (c) => c.presente && c.localizacao === LOCALIZACAO.DOCA && c.doca === numeroDoca && c.placa !== placaIgnorar
+    ) || null
+  );
 }
 
 async function onConfirmarChegada() {
@@ -379,45 +504,79 @@ async function onConfirmarChegada() {
     toast('Informe a placa da carreta.');
     return;
   }
-  if (!selecaoChegadaCondicao) {
-    toast('Selecione a condição.');
+  if (!selecaoChegadaSituacao) {
+    toast('Selecione a situação.');
     return;
   }
-  if (!selecaoChegadaLocalizacao) {
-    toast('Selecione a localização inicial.');
+  if (!selecaoChegadaTemCavalo) {
+    toast('Informe se está com cavalo.');
     return;
   }
 
   const existente = await DB.carretaBuscarPorPlaca(placa);
-  if (existente && existente.status !== STATUS.FORA_DO_PATIO) {
+  if (existente && existente.presente) {
     toast('Esta carreta já consta no pátio.');
     return;
   }
 
-  let docaNumero = normalizarPlaca(document.getElementById('chegada-doca-numero').value);
-  if (selecaoChegadaLocalizacao === 'DOCA' && !docaNumero) {
-    toast('Informe o número da doca.');
+  let placaCavalo = '';
+  if (selecaoChegadaTemCavalo === 'SIM') {
+    placaCavalo = normalizarPlaca(document.getElementById('chegada-placa-cavalo').value);
+    if (!placaCavalo) {
+      toast('Informe a placa do cavalo.');
+      return;
+    }
+    const conflito = await encontrarCarretaComCavalo(placaCavalo, null);
+    if (conflito) {
+      toast(`Este cavalo já está vinculado à carreta ${conflito.placa}.`);
+      return;
+    }
+  }
+
+  if (!selecaoChegadaLocalizacao) {
+    toast('Selecione a localização.');
     return;
+  }
+
+  let docaNumero = '';
+  if (selecaoChegadaLocalizacao === 'DOCA') {
+    docaNumero = normalizarPlaca(document.getElementById('chegada-doca-numero').value);
+    if (!docaNumero) {
+      toast('Informe o número da doca.');
+      return;
+    }
+  }
+
+  let localizacaoOutroTexto = '';
+  if (selecaoChegadaLocalizacao === 'OUTRO') {
+    localizacaoOutroTexto = document.getElementById('chegada-localizacao-outro-texto').value.trim();
+    if (!localizacaoOutroTexto) {
+      toast('Descreva a localização.');
+      return;
+    }
+  }
+
+  let insumoDetalhe = '';
+  if (selecaoChegadaSituacao === 'INSUMOS' && selecaoChegadaInsumo) {
+    insumoDetalhe =
+      selecaoChegadaInsumo === 'OUTRO'
+        ? document.getElementById('chegada-insumo-outro-texto').value.trim()
+        : selecaoChegadaInsumo;
   }
 
   const finalizar = async () => {
     const agora = Date.now();
-    const status =
-      selecaoChegadaLocalizacao === 'DOCA'
-        ? STATUS.NA_DOCA
-        : selecaoChegadaLocalizacao === 'AGUARDANDO'
-        ? STATUS.AGUARDANDO
-        : STATUS.DISPONIVEL;
 
     const carreta = {
       placa,
-      placaCavalo: normalizarPlaca(document.getElementById('chegada-placa-cavalo').value),
-      motorista: document.getElementById('chegada-motorista').value.trim(),
-      condicao: selecaoChegadaCondicao,
-      status,
-      doca: status === STATUS.NA_DOCA ? docaNumero : '',
-      motivoIndisponivel: '',
-      observacao: document.getElementById('chegada-obs').value.trim(),
+      situacao: selecaoChegadaSituacao,
+      insumoDetalhe,
+      temCavalo: selecaoChegadaTemCavalo === 'SIM',
+      placaCavalo,
+      localizacao: selecaoChegadaLocalizacao,
+      localizacaoOutroTexto,
+      doca: docaNumero,
+      presente: true,
       destino: '',
       chegadaTimestamp: agora,
       ultimaMovimentacaoTimestamp: agora,
@@ -427,23 +586,26 @@ async function onConfirmarChegada() {
     };
 
     await DB.carretaSalvar(carreta);
+
+    if (placaCavalo) {
+      const avulso = await DB.cavaloAvulsoBuscarPorPlaca(placaCavalo);
+      if (avulso) await DB.cavaloAvulsoExcluir(placaCavalo);
+    }
+
     await DB.movimentacaoRegistrar({
       placa,
       tipo: TIPO_MOVIMENTO.CHEGADA,
-      detalhe: `Chegada — ${selecaoChegadaCondicao === CONDICAO.CARREGADA ? 'CARREGADA' : 'VAZIA'}${
-        status === STATUS.NA_DOCA ? ` — Doca ${docaNumero}` : ''
-      }`,
+      detalhe: `${SITUACAO_LABEL[selecaoChegadaSituacao]} — ${localizacaoTextoTela(carreta)}`,
       timestamp: agora,
-      doca: status === STATUS.NA_DOCA ? docaNumero : '',
-      condicao: selecaoChegadaCondicao,
+      doca: docaNumero,
     });
 
     fecharOverlay('overlay-chegada');
-    toast('Chegada registrada.');
+    toast('Carreta registrada.');
     await atualizarTudo();
   };
 
-  if (status_localizacaoOcupaDoca(selecaoChegadaLocalizacao)) {
+  if (selecaoChegadaLocalizacao === 'DOCA') {
     const ocupante = await encontrarOcupanteDaDoca(docaNumero, placa);
     if (ocupante) {
       abrirConfirm(
@@ -458,155 +620,65 @@ async function onConfirmarChegada() {
   await finalizar();
 }
 
-function status_localizacaoOcupaDoca(localizacao) {
-  return localizacao === 'DOCA';
-}
-
-async function encontrarOcupanteDaDoca(numeroDoca, placaIgnorar) {
-  const carretas = await DB.carretaListarTodas();
-  return (
-    carretas.find(
-      (c) => c.status === STATUS.NA_DOCA && c.doca === numeroDoca && c.placa !== placaIgnorar
-    ) || null
-  );
-}
-
 /* ============================================================
-   MODAL — REGISTRAR SAÍDA
+   MODAL — DETALHES / AÇÕES RÁPIDAS
    ============================================================ */
 
-function abrirModalSaida(placaPredefinida) {
-  document.getElementById('saida-placa').value = placaPredefinida || '';
-  document.getElementById('saida-placa-cavalo').value = '';
-  document.getElementById('saida-motorista').value = '';
-  document.getElementById('saida-destino').value = '';
-  document.getElementById('saida-aviso').innerHTML = '';
-  selecaoSaidaCondicao = null;
-  document.querySelectorAll('#saida-condicao .opcao-btn').forEach((b) => b.classList.remove('selecionado'));
-  abrirOverlay('overlay-saida');
-}
+async function abrirDetalhes(placa, tipo) {
+  contextoDetalhesPlaca = placa;
+  contextoDetalhesTipo = tipo;
 
-function ligarModalSaida() {
-  const placaInput = document.getElementById('saida-placa');
-  placaInput.addEventListener('input', () => {
-    placaInput.value = normalizarPlaca(placaInput.value);
-  });
+  if (tipo === 'cavalo') {
+    const cavalo = await DB.cavaloAvulsoBuscarPorPlaca(placa);
+    if (!cavalo) {
+      toast('Cavalo não encontrado.');
+      return;
+    }
+    document.getElementById('detalhes-titulo').textContent = cavalo.placa;
+    const linhas = [
+      ['Placa', cavalo.placa],
+      ['Tipo', 'Cavalo avulso'],
+      ['Localização', localizacaoTextoTela(cavalo)],
+      ['Desde', formatarDataHora(cavalo.ultimaMovimentacaoTimestamp || cavalo.criadoEm)],
+    ];
+    document.getElementById('detalhes-conteudo').innerHTML = linhas
+      .map(
+        ([rotulo, valor]) =>
+          `<div class="detalhes-linha"><span class="rotulo">${rotulo}</span><span class="valor">${valor}</span></div>`
+      )
+      .join('');
 
-  document.querySelectorAll('#saida-condicao .opcao-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#saida-condicao .opcao-btn').forEach((b) => b.classList.remove('selecionado'));
-      btn.classList.add('selecionado');
-      selecaoSaidaCondicao = btn.dataset.valor;
-    });
-  });
+    const acoesEl = document.getElementById('detalhes-acoes');
+    acoesEl.innerHTML = '';
+    criarBotaoAcao(acoesEl, 'ALTERAR LOCALIZAÇÃO', 'btn-outline', () => acaoAbrirAlterarLocalizacao(placa, 'cavalo'));
+    criarBotaoAcao(acoesEl, 'REMOVER DO PÁTIO', 'btn-perigo', () => acaoRemoverCavaloAvulso(placa));
 
-  document.getElementById('btn-confirmar-saida').addEventListener('click', onConfirmarSaida);
-}
-
-async function onConfirmarSaida() {
-  const placa = normalizarPlaca(document.getElementById('saida-placa').value);
-  if (!placa) {
-    toast('Informe a placa da carreta.');
-    return;
-  }
-  if (!selecaoSaidaCondicao) {
-    toast('Selecione a condição.');
+    abrirOverlay('overlay-detalhes');
     return;
   }
 
-  const existente = await DB.carretaBuscarPorPlaca(placa);
-
-  const finalizarSaida = async () => {
-    const agora = Date.now();
-    const placaCavalo = normalizarPlaca(document.getElementById('saida-placa-cavalo').value);
-    const motorista = document.getElementById('saida-motorista').value.trim();
-    const destino = document.getElementById('saida-destino').value.trim();
-
-    const carreta = existente || {
-      placa,
-      placaCavalo: '',
-      motorista: '',
-      condicao: selecaoSaidaCondicao,
-      status: STATUS.FORA_DO_PATIO,
-      doca: '',
-      motivoIndisponivel: '',
-      observacao: '',
-      destino: '',
-      chegadaTimestamp: null,
-      criadoEm: agora,
-    };
-
-    carreta.status = STATUS.FORA_DO_PATIO;
-    carreta.condicao = selecaoSaidaCondicao;
-    if (placaCavalo) carreta.placaCavalo = placaCavalo;
-    if (motorista) carreta.motorista = motorista;
-    carreta.destino = destino;
-    carreta.doca = '';
-    carreta.saidaTimestamp = agora;
-    carreta.ultimaMovimentacaoTimestamp = agora;
-    carreta.atualizadoEm = agora;
-
-    await DB.carretaSalvar(carreta);
-    await DB.movimentacaoRegistrar({
-      placa,
-      tipo: TIPO_MOVIMENTO.SAIDA,
-      detalhe: `Saída — ${selecaoSaidaCondicao === CONDICAO.CARREGADA ? 'CARREGADA' : 'VAZIA'}${
-        destino ? ` — ${destino}` : ''
-      }`,
-      timestamp: agora,
-      doca: '',
-      condicao: selecaoSaidaCondicao,
-    });
-
-    fecharOverlay('overlay-saida');
-    fecharOverlay('overlay-detalhes');
-    toast('Saída registrada.');
-    await atualizarTudo();
-  };
-
-  if (!existente || existente.status === STATUS.FORA_DO_PATIO) {
-    abrirConfirm(
-      'Carreta Fora do Pátio',
-      `A carreta ${placa} não consta como estando no pátio no momento. Deseja registrar a saída mesmo assim?`,
-      finalizarSaida
-    );
-    return;
-  }
-
-  await finalizarSaida();
-}
-
-/* ============================================================
-   MODAL — DETALHES DA CARRETA
-   ============================================================ */
-
-async function abrirDetalhes(placa) {
   const carreta = await DB.carretaBuscarPorPlaca(placa);
   if (!carreta) {
     toast('Carreta não encontrada.');
     return;
   }
-  contextoDetalhesPlaca = placa;
 
   document.getElementById('detalhes-titulo').textContent = carreta.placa;
 
   const linhas = [
     ['Placa', carreta.placa],
-    ['Condição', carreta.condicao === CONDICAO.CARREGADA ? 'CARREGADA' : 'VAZIA'],
-    ['Status', STATUS_LABEL[carreta.status]],
-    ['Localização', carreta.status === STATUS.NA_DOCA ? `Doca ${carreta.doca}` : STATUS_LABEL[carreta.status]],
+    ['Situação', SITUACAO_LABEL[carreta.situacao]],
   ];
-  if (carreta.doca) linhas.push(['Doca', carreta.doca]);
-  if (carreta.chegadaTimestamp) linhas.push(['Chegada', formatarDataHora(carreta.chegadaTimestamp)]);
-  linhas.push([
-    'Última Movimentação',
-    formatarDataHora(carreta.ultimaMovimentacaoTimestamp || carreta.chegadaTimestamp || carreta.criadoEm),
-  ]);
-  if (carreta.placaCavalo) linhas.push(['Placa do Cavalo', carreta.placaCavalo]);
-  if (carreta.motorista) linhas.push(['Motorista', carreta.motorista]);
-  if (carreta.destino) linhas.push(['Destino', carreta.destino]);
-  if (carreta.motivoIndisponivel) linhas.push(['Motivo Indisponibilidade', carreta.motivoIndisponivel]);
-  if (carreta.observacao) linhas.push(['Observação', carreta.observacao]);
+  if (carreta.situacao === 'INSUMOS' && carreta.insumoDetalhe) linhas.push(['Insumo', carreta.insumoDetalhe]);
+  linhas.push(['Cavalo', carreta.temCavalo && carreta.placaCavalo ? carreta.placaCavalo : 'Sem cavalo']);
+  linhas.push(['Localização', localizacaoTextoTela(carreta)]);
+  if (carreta.presente) {
+    linhas.push(['Chegada', formatarDataHora(carreta.chegadaTimestamp)]);
+  } else {
+    linhas.push(['Saída', formatarDataHora(carreta.saidaTimestamp)]);
+    if (carreta.destino) linhas.push(['Destino', carreta.destino]);
+  }
+  linhas.push(['Última Movimentação', formatarDataHora(carreta.ultimaMovimentacaoTimestamp)]);
 
   document.getElementById('detalhes-conteudo').innerHTML = linhas
     .map(
@@ -618,231 +690,383 @@ async function abrirDetalhes(placa) {
   const acoesEl = document.getElementById('detalhes-acoes');
   acoesEl.innerHTML = '';
 
-  const criarBotaoAcao = (texto, classe, handler) => {
-    const btn = document.createElement('button');
-    btn.className = `btn ${classe}`;
-    btn.textContent = texto;
-    btn.addEventListener('click', handler);
-    acoesEl.appendChild(btn);
-  };
-
-  if (carreta.status !== STATUS.FORA_DO_PATIO) {
-    if (carreta.status !== STATUS.DISPONIVEL) {
-      criarBotaoAcao('TORNAR DISPONÍVEL', 'btn-outline', () => acaoTornarDisponivel(carreta.placa));
-    }
-    if (carreta.status !== STATUS.NA_DOCA) {
-      criarBotaoAcao('MANDAR PARA DOCA', 'btn-outline', () => acaoAbrirDocaNumero(carreta.placa));
-    }
-    if (carreta.status !== STATUS.AGUARDANDO) {
-      criarBotaoAcao('COLOCAR EM AGUARDANDO', 'btn-outline', () => acaoColocarAguardando(carreta.placa));
-    }
-    if (carreta.status !== STATUS.INDISPONIVEL) {
-      criarBotaoAcao('TORNAR INDISPONÍVEL', 'btn-outline', () => acaoAbrirIndisponivel(carreta.placa));
-    }
-    criarBotaoAcao('REGISTRAR SAÍDA', 'btn-secundario', () => {
-      fecharOverlay('overlay-detalhes');
-      abrirModalSaida(carreta.placa);
-    });
+  if (carreta.presente) {
+    criarBotaoAcao(acoesEl, 'ALTERAR SITUAÇÃO', 'btn-outline', () => acaoAbrirAlterarSituacao(carreta.placa));
+    criarBotaoAcao(acoesEl, 'ALTERAR CAVALO', 'btn-outline', () => acaoAbrirAlterarCavalo(carreta.placa));
+    criarBotaoAcao(acoesEl, 'ALTERAR LOCALIZAÇÃO', 'btn-outline', () =>
+      acaoAbrirAlterarLocalizacao(carreta.placa, 'carreta')
+    );
+    criarBotaoAcao(acoesEl, 'REGISTRAR SAÍDA', 'btn-secundario', () => acaoAbrirSaida(carreta.placa));
+    criarBotaoAcao(acoesEl, 'EDITAR', 'btn-outline', () => acaoAbrirEditar(carreta.placa));
   }
-
-  criarBotaoAcao('EDITAR', 'btn-outline', () => acaoAbrirEditar(carreta.placa));
-  criarBotaoAcao('VER HISTÓRICO', 'btn-outline', () => acaoVerHistoricoIndividual(carreta.placa));
 
   abrirOverlay('overlay-detalhes');
 }
 
-function ligarModalDetalhes() {
-  // ações ligadas dinamicamente em abrirDetalhes()
+function criarBotaoAcao(container, texto, classe, handler) {
+  const btn = document.createElement('button');
+  btn.className = `btn ${classe}`;
+  btn.textContent = texto;
+  btn.addEventListener('click', handler);
+  container.appendChild(btn);
 }
 
-/* ---------- ações a partir dos detalhes ---------- */
+/* ============================================================
+   ALTERAR SITUAÇÃO
+   ============================================================ */
 
-function acaoTornarDisponivel(placa) {
-  abrirConfirm('Tornar Disponível', `Confirmar que a carreta ${placa} está DISPONÍVEL?`, async () => {
-    const carreta = await DB.carretaBuscarPorPlaca(placa);
-    const agora = Date.now();
-    carreta.status = STATUS.DISPONIVEL;
-    carreta.doca = '';
-    carreta.ultimaMovimentacaoTimestamp = agora;
-    carreta.atualizadoEm = agora;
-    await DB.carretaSalvar(carreta);
-    await DB.movimentacaoRegistrar({
-      placa,
-      tipo: TIPO_MOVIMENTO.DISPONIVEL,
-      detalhe: 'Disponível',
-      timestamp: agora,
-      doca: '',
-      condicao: carreta.condicao,
-    });
-    fecharOverlay('overlay-detalhes');
-    toast('Carreta disponível.');
-    await atualizarTudo();
-  });
-}
+async function acaoAbrirAlterarSituacao(placa) {
+  contextoAlterarSituacaoPlaca = placa;
+  const carreta = await DB.carretaBuscarPorPlaca(placa);
 
-function acaoColocarAguardando(placa) {
-  (async () => {
-    const carreta = await DB.carretaBuscarPorPlaca(placa);
-    const agora = Date.now();
-    carreta.status = STATUS.AGUARDANDO;
-    carreta.doca = '';
-    carreta.ultimaMovimentacaoTimestamp = agora;
-    carreta.atualizadoEm = agora;
-    await DB.carretaSalvar(carreta);
-    await DB.movimentacaoRegistrar({
-      placa,
-      tipo: TIPO_MOVIMENTO.AGUARDANDO,
-      detalhe: 'Aguardando',
-      timestamp: agora,
-      doca: '',
-      condicao: carreta.condicao,
-    });
-    fecharOverlay('overlay-detalhes');
-    toast('Carreta em aguardando.');
-    await atualizarTudo();
-  })();
-}
+  document.getElementById('alterar-situacao-insumo-outro-texto').value = '';
+  document.getElementById('alterar-situacao-insumo-outro-texto').style.display = 'none';
+  selecaoAlterarSituacao = carreta.situacao;
+  selecaoAlterarSituacaoInsumo = null;
 
-function acaoAbrirDocaNumero(placa) {
-  contextoDocaPlaca = placa;
-  document.getElementById('doca-numero-input').value = '';
+  selecionarOpcao('alterar-situacao-opcoes', carreta.situacao);
+  document.getElementById('alterar-situacao-insumo-wrap').style.display =
+    carreta.situacao === 'INSUMOS' ? 'block' : 'none';
+
+  document.querySelectorAll('#alterar-situacao-insumo-opcoes .opcao-btn').forEach((b) => b.classList.remove('selecionado'));
+  if (carreta.situacao === 'INSUMOS' && carreta.insumoDetalhe) {
+    const conhecido = ['Paletes', 'Caixa amarela'].includes(carreta.insumoDetalhe);
+    selecaoAlterarSituacaoInsumo = conhecido ? carreta.insumoDetalhe : 'OUTRO';
+    selecionarOpcao('alterar-situacao-insumo-opcoes', selecaoAlterarSituacaoInsumo);
+    if (!conhecido) {
+      document.getElementById('alterar-situacao-insumo-outro-texto').style.display = 'block';
+      document.getElementById('alterar-situacao-insumo-outro-texto').value = carreta.insumoDetalhe;
+    }
+  }
+
   fecharOverlay('overlay-detalhes');
-  abrirOverlay('overlay-doca-numero');
+  abrirOverlay('overlay-alterar-situacao');
 }
 
-function ligarModalDocaNumero() {
-  const input = document.getElementById('doca-numero-input');
-  input.addEventListener('input', () => {
-    input.value = normalizarPlaca(input.value);
+function ligarModalAlterarSituacao() {
+  configurarPickerSituacao('alterar-situacao-opcoes', 'alterar-situacao-insumo-wrap', (valor) => {
+    selecaoAlterarSituacao = valor;
+  });
+  configurarPickerInsumo('alterar-situacao-insumo-opcoes', 'alterar-situacao-insumo-outro-texto', (valor) => {
+    selecaoAlterarSituacaoInsumo = valor;
   });
 
-  document.getElementById('btn-confirmar-doca').addEventListener('click', async () => {
-    const numero = normalizarPlaca(input.value);
-    if (!numero) {
-      toast('Informe o número da doca.');
+  document.getElementById('btn-confirmar-alterar-situacao').addEventListener('click', async () => {
+    if (!selecaoAlterarSituacao) {
+      toast('Selecione a situação.');
       return;
     }
-    const placa = contextoDocaPlaca;
+    let insumoDetalhe = '';
+    if (selecaoAlterarSituacao === 'INSUMOS' && selecaoAlterarSituacaoInsumo) {
+      insumoDetalhe =
+        selecaoAlterarSituacaoInsumo === 'OUTRO'
+          ? document.getElementById('alterar-situacao-insumo-outro-texto').value.trim()
+          : selecaoAlterarSituacaoInsumo;
+    }
+
+    const placa = contextoAlterarSituacaoPlaca;
+    const carreta = await DB.carretaBuscarPorPlaca(placa);
+    const agora = Date.now();
+    carreta.situacao = selecaoAlterarSituacao;
+    carreta.insumoDetalhe = insumoDetalhe;
+    carreta.ultimaMovimentacaoTimestamp = agora;
+    carreta.atualizadoEm = agora;
+    await DB.carretaSalvar(carreta);
+    await DB.movimentacaoRegistrar({
+      placa,
+      tipo: TIPO_MOVIMENTO.SITUACAO,
+      detalhe: `${SITUACAO_LABEL[selecaoAlterarSituacao]}${insumoDetalhe ? ' — ' + insumoDetalhe : ''}`,
+      timestamp: agora,
+      doca: carreta.doca || '',
+    });
+
+    fecharOverlay('overlay-alterar-situacao');
+    toast('Situação atualizada.');
+    await atualizarTudo();
+  });
+}
+
+/* ============================================================
+   ALTERAR CAVALO
+   ============================================================ */
+
+async function acaoAbrirAlterarCavalo(placa) {
+  contextoAlterarCavaloPlaca = placa;
+  const carreta = await DB.carretaBuscarPorPlaca(placa);
+
+  document.getElementById('alterar-cavalo-aviso').innerHTML = '';
+  selecaoAlterarCavalo = carreta.temCavalo ? 'COM' : 'SEM';
+  selecionarOpcao('alterar-cavalo-opcoes', selecaoAlterarCavalo);
+  document.getElementById('alterar-cavalo-placa-wrap').style.display = carreta.temCavalo ? 'block' : 'none';
+  document.getElementById('alterar-cavalo-placa').value = carreta.placaCavalo || '';
+
+  fecharOverlay('overlay-detalhes');
+  abrirOverlay('overlay-alterar-cavalo');
+}
+
+function ligarModalAlterarCavalo() {
+  configurarPickerSimples('alterar-cavalo-opcoes', (valor) => {
+    selecaoAlterarCavalo = valor;
+    document.getElementById('alterar-cavalo-placa-wrap').style.display = valor === 'COM' ? 'block' : 'none';
+  });
+
+  const placaInput = document.getElementById('alterar-cavalo-placa');
+  placaInput.addEventListener('input', async () => {
+    placaInput.value = normalizarPlaca(placaInput.value);
+    const avisoEl = document.getElementById('alterar-cavalo-aviso');
+    avisoEl.innerHTML = '';
+    if (placaInput.value.length < 6) return;
+    const conflito = await encontrarCarretaComCavalo(placaInput.value, contextoAlterarCavaloPlaca);
+    if (conflito) {
+      avisoEl.innerHTML = `<div class="aviso-box">Este cavalo já está vinculado à carreta ${conflito.placa}.</div>`;
+    }
+  });
+
+  document.getElementById('btn-confirmar-alterar-cavalo').addEventListener('click', async () => {
+    const placa = contextoAlterarCavaloPlaca;
+    const carreta = await DB.carretaBuscarPorPlaca(placa);
+    const agora = Date.now();
+    let detalhe;
+    let placaCavaloVinculada = '';
+
+    if (selecaoAlterarCavalo === 'COM') {
+      const placaCavalo = normalizarPlaca(document.getElementById('alterar-cavalo-placa').value);
+      if (!placaCavalo) {
+        toast('Informe a placa do cavalo.');
+        return;
+      }
+      const conflito = await encontrarCarretaComCavalo(placaCavalo, placa);
+      if (conflito) {
+        toast(`Este cavalo já está vinculado à carreta ${conflito.placa}.`);
+        return;
+      }
+      carreta.temCavalo = true;
+      carreta.placaCavalo = placaCavalo;
+      placaCavaloVinculada = placaCavalo;
+      detalhe = `Com cavalo ${placaCavalo}`;
+    } else {
+      carreta.temCavalo = false;
+      carreta.placaCavalo = '';
+      detalhe = 'Sem cavalo';
+    }
+
+    carreta.ultimaMovimentacaoTimestamp = agora;
+    carreta.atualizadoEm = agora;
+    await DB.carretaSalvar(carreta);
+
+    if (placaCavaloVinculada) {
+      const avulso = await DB.cavaloAvulsoBuscarPorPlaca(placaCavaloVinculada);
+      if (avulso) await DB.cavaloAvulsoExcluir(placaCavaloVinculada);
+    }
+
+    await DB.movimentacaoRegistrar({
+      placa,
+      tipo: TIPO_MOVIMENTO.CAVALO,
+      detalhe,
+      timestamp: agora,
+      doca: carreta.doca || '',
+    });
+
+    fecharOverlay('overlay-alterar-cavalo');
+    toast('Cavalo atualizado.');
+    await atualizarTudo();
+  });
+}
+
+/* ============================================================
+   ALTERAR LOCALIZAÇÃO (carreta ou cavalo avulso)
+   ============================================================ */
+
+async function acaoAbrirAlterarLocalizacao(placa, tipo) {
+  contextoLocalizacaoAlvo = { placa, tipo };
+  const entidade =
+    tipo === 'cavalo' ? await DB.cavaloAvulsoBuscarPorPlaca(placa) : await DB.carretaBuscarPorPlaca(placa);
+
+  document.getElementById('alterar-localizacao-doca-numero').value = entidade.doca || '';
+  document.getElementById('alterar-localizacao-outro-texto').value = entidade.localizacaoOutroTexto || '';
+  selecaoAlterarLocalizacao = entidade.localizacao;
+  selecionarOpcao('alterar-localizacao-opcoes', entidade.localizacao);
+  document.getElementById('alterar-localizacao-doca-wrap').style.display =
+    entidade.localizacao === 'DOCA' ? 'block' : 'none';
+  document.getElementById('alterar-localizacao-outro-wrap').style.display =
+    entidade.localizacao === 'OUTRO' ? 'block' : 'none';
+
+  fecharOverlay('overlay-detalhes');
+  abrirOverlay('overlay-alterar-localizacao');
+}
+
+function ligarModalAlterarLocalizacao() {
+  configurarPickerLocalizacao(
+    'alterar-localizacao-opcoes',
+    'alterar-localizacao-doca-wrap',
+    'alterar-localizacao-outro-wrap',
+    (valor) => {
+      selecaoAlterarLocalizacao = valor;
+    }
+  );
+
+  document.getElementById('btn-confirmar-alterar-localizacao').addEventListener('click', async () => {
+    if (!selecaoAlterarLocalizacao) {
+      toast('Selecione a localização.');
+      return;
+    }
+    let docaNumero = '';
+    if (selecaoAlterarLocalizacao === 'DOCA') {
+      docaNumero = normalizarPlaca(document.getElementById('alterar-localizacao-doca-numero').value);
+      if (!docaNumero) {
+        toast('Informe o número da doca.');
+        return;
+      }
+    }
+    let outroTexto = '';
+    if (selecaoAlterarLocalizacao === 'OUTRO') {
+      outroTexto = document.getElementById('alterar-localizacao-outro-texto').value.trim();
+      if (!outroTexto) {
+        toast('Descreva a localização.');
+        return;
+      }
+    }
+
+    const { placa, tipo } = contextoLocalizacaoAlvo;
 
     const finalizar = async () => {
-      const carreta = await DB.carretaBuscarPorPlaca(placa);
       const agora = Date.now();
-      carreta.status = STATUS.NA_DOCA;
-      carreta.doca = numero;
-      carreta.ultimaMovimentacaoTimestamp = agora;
-      carreta.atualizadoEm = agora;
-      await DB.carretaSalvar(carreta);
-      await DB.movimentacaoRegistrar({
-        placa,
-        tipo: TIPO_MOVIMENTO.DOCA,
-        detalhe: `Movida para Doca ${numero}`,
-        timestamp: agora,
-        doca: numero,
-        condicao: carreta.condicao,
-      });
-      fecharOverlay('overlay-doca-numero');
-      toast(`Carreta enviada para Doca ${numero}.`);
+      if (tipo === 'cavalo') {
+        const cavalo = await DB.cavaloAvulsoBuscarPorPlaca(placa);
+        cavalo.localizacao = selecaoAlterarLocalizacao;
+        cavalo.doca = docaNumero;
+        cavalo.localizacaoOutroTexto = outroTexto;
+        cavalo.ultimaMovimentacaoTimestamp = agora;
+        await DB.cavaloAvulsoSalvar(cavalo);
+        await DB.movimentacaoRegistrar({
+          placa,
+          tipo: TIPO_MOVIMENTO.CAVALO_AVULSO,
+          detalhe: `Cavalo — ${localizacaoTextoTela(cavalo)}`,
+          timestamp: agora,
+          doca: docaNumero,
+        });
+      } else {
+        const carreta = await DB.carretaBuscarPorPlaca(placa);
+        carreta.localizacao = selecaoAlterarLocalizacao;
+        carreta.doca = docaNumero;
+        carreta.localizacaoOutroTexto = outroTexto;
+        carreta.ultimaMovimentacaoTimestamp = agora;
+        carreta.atualizadoEm = agora;
+        await DB.carretaSalvar(carreta);
+        await DB.movimentacaoRegistrar({
+          placa,
+          tipo: TIPO_MOVIMENTO.LOCALIZACAO,
+          detalhe: localizacaoTextoTela(carreta),
+          timestamp: agora,
+          doca: docaNumero,
+        });
+      }
+
+      fecharOverlay('overlay-alterar-localizacao');
+      toast('Localização atualizada.');
       await atualizarTudo();
     };
 
-    const ocupante = await encontrarOcupanteDaDoca(numero, placa);
-    if (ocupante) {
-      abrirConfirm(
-        'Doca Ocupada',
-        `A doca ${numero} já está ocupada pela carreta ${ocupante.placa}. Deseja continuar mesmo assim?`,
-        finalizar
-      );
-      return;
+    if (selecaoAlterarLocalizacao === 'DOCA' && tipo === 'carreta') {
+      const ocupante = await encontrarOcupanteDaDoca(docaNumero, placa);
+      if (ocupante) {
+        abrirConfirm(
+          'Doca Ocupada',
+          `A doca ${docaNumero} já está ocupada pela carreta ${ocupante.placa}. Deseja continuar mesmo assim?`,
+          finalizar
+        );
+        return;
+      }
     }
+
     await finalizar();
   });
 }
 
-function acaoAbrirIndisponivel(placa) {
-  contextoIndisponivelPlaca = placa;
-  selecaoIndisponivelMotivo = null;
-  document.querySelectorAll('#indisponivel-motivos .opcao-btn').forEach((b) => b.classList.remove('selecionado'));
-  document.getElementById('indisponivel-outro-wrap').style.display = 'none';
-  document.getElementById('indisponivel-outro-texto').value = '';
+/* ============================================================
+   REGISTRAR SAÍDA
+   ============================================================ */
+
+async function acaoAbrirSaida(placa) {
+  contextoSaidaPlaca = placa;
+  const carreta = await DB.carretaBuscarPorPlaca(placa);
+
+  document.getElementById('saida-placa-texto').textContent = carreta.placa;
+  document.getElementById('saida-destino').value = '';
+
+  const cavaloLinha = document.getElementById('saida-cavalo-linha');
+  if (carreta.temCavalo && carreta.placaCavalo) {
+    cavaloLinha.style.display = 'flex';
+    document.getElementById('saida-cavalo-texto').textContent = carreta.placaCavalo;
+  } else {
+    cavaloLinha.style.display = 'none';
+  }
+
   fecharOverlay('overlay-detalhes');
-  abrirOverlay('overlay-indisponivel');
+  abrirOverlay('overlay-saida');
 }
 
-function ligarModalIndisponivel() {
-  document.querySelectorAll('#indisponivel-motivos .opcao-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#indisponivel-motivos .opcao-btn').forEach((b) => b.classList.remove('selecionado'));
-      btn.classList.add('selecionado');
-      selecaoIndisponivelMotivo = btn.dataset.valor;
-      document.getElementById('indisponivel-outro-wrap').style.display =
-        selecaoIndisponivelMotivo === 'OUTRO' ? 'block' : 'none';
-    });
-  });
-
-  document.getElementById('btn-confirmar-indisponivel').addEventListener('click', async () => {
-    if (!selecaoIndisponivelMotivo) {
-      toast('Selecione o motivo.');
-      return;
-    }
-    let motivo = selecaoIndisponivelMotivo;
-    if (motivo === 'OUTRO') {
-      const texto = document.getElementById('indisponivel-outro-texto').value.trim();
-      if (!texto) {
-        toast('Descreva o motivo.');
-        return;
-      }
-      motivo = texto;
-    }
-
-    const placa = contextoIndisponivelPlaca;
+function ligarModalSaida() {
+  document.getElementById('btn-confirmar-saida').addEventListener('click', async () => {
+    const placa = contextoSaidaPlaca;
     const carreta = await DB.carretaBuscarPorPlaca(placa);
     const agora = Date.now();
-    carreta.status = STATUS.INDISPONIVEL;
-    carreta.motivoIndisponivel = motivo;
-    carreta.doca = '';
+    const destino = document.getElementById('saida-destino').value.trim();
+
+    carreta.presente = false;
+    carreta.destino = destino;
+    carreta.saidaTimestamp = agora;
     carreta.ultimaMovimentacaoTimestamp = agora;
     carreta.atualizadoEm = agora;
     await DB.carretaSalvar(carreta);
+
     await DB.movimentacaoRegistrar({
       placa,
-      tipo: TIPO_MOVIMENTO.INDISPONIVEL,
-      detalhe: `Indisponível — ${motivo}`,
+      tipo: TIPO_MOVIMENTO.SAIDA,
+      detalhe: `SAÍDA${destino ? ' — ' + destino : ''}`,
       timestamp: agora,
       doca: '',
-      condicao: carreta.condicao,
-      motivo,
     });
 
-    fecharOverlay('overlay-indisponivel');
-    toast('Carreta indisponível.');
+    fecharOverlay('overlay-saida');
+    toast('Saída registrada.');
     await atualizarTudo();
   });
 }
 
-function acaoAbrirEditar(placa) {
+/* ============================================================
+   EDITAR
+   ============================================================ */
+
+async function acaoAbrirEditar(placa) {
   contextoEditarPlaca = placa;
-  DB.carretaBuscarPorPlaca(placa).then((carreta) => {
-    document.getElementById('editar-placa-cavalo').value = carreta.placaCavalo || '';
-    document.getElementById('editar-motorista').value = carreta.motorista || '';
-    document.getElementById('editar-obs').value = carreta.observacao || '';
-    fecharOverlay('overlay-detalhes');
-    abrirOverlay('overlay-editar');
-  });
+  const carreta = await DB.carretaBuscarPorPlaca(placa);
+
+  const insumoWrap = document.getElementById('editar-insumo-wrap');
+  const outroWrap = document.getElementById('editar-localizacao-outro-wrap');
+
+  insumoWrap.style.display = carreta.situacao === 'INSUMOS' ? 'block' : 'none';
+  document.getElementById('editar-insumo-texto').value = carreta.insumoDetalhe || '';
+
+  outroWrap.style.display = carreta.localizacao === 'OUTRO' ? 'block' : 'none';
+  document.getElementById('editar-localizacao-outro-texto').value = carreta.localizacaoOutroTexto || '';
+
+  fecharOverlay('overlay-detalhes');
+  abrirOverlay('overlay-editar');
 }
 
 function ligarModalEditar() {
-  const placaCavaloInput = document.getElementById('editar-placa-cavalo');
-  placaCavaloInput.addEventListener('input', () => {
-    placaCavaloInput.value = normalizarPlaca(placaCavaloInput.value);
-  });
-
   document.getElementById('btn-confirmar-editar').addEventListener('click', async () => {
     const placa = contextoEditarPlaca;
     const carreta = await DB.carretaBuscarPorPlaca(placa);
     const agora = Date.now();
-    carreta.placaCavalo = normalizarPlaca(document.getElementById('editar-placa-cavalo').value);
-    carreta.motorista = document.getElementById('editar-motorista').value.trim();
-    carreta.observacao = document.getElementById('editar-obs').value.trim();
+
+    if (carreta.situacao === 'INSUMOS') {
+      carreta.insumoDetalhe = document.getElementById('editar-insumo-texto').value.trim();
+    }
+    if (carreta.localizacao === 'OUTRO') {
+      carreta.localizacaoOutroTexto = document.getElementById('editar-localizacao-outro-texto').value.trim();
+    }
     carreta.atualizadoEm = agora;
     await DB.carretaSalvar(carreta);
     await DB.movimentacaoRegistrar({
@@ -851,21 +1075,122 @@ function ligarModalEditar() {
       detalhe: 'Dados editados',
       timestamp: agora,
       doca: carreta.doca || '',
-      condicao: carreta.condicao,
     });
+
     fecharOverlay('overlay-editar');
     toast('Carreta atualizada.');
     await atualizarTudo();
   });
 }
 
-async function acaoVerHistoricoIndividual(placa) {
-  fecharOverlay('overlay-detalhes');
-  filtroHistoricoAtivo = 'TODAS';
-  filtroHistoricoPlaca = placa;
-  document.getElementById('filtro-busca-placa').value = placa;
-  document.querySelectorAll('.filtro-chip').forEach((c) => c.classList.toggle('ativo', c.dataset.filtro === 'TODAS'));
-  await trocarTela('tela-historico');
+/* ============================================================
+   CAVALO NO PÁTIO (avulso)
+   ============================================================ */
+
+function abrirModalCavaloAvulso() {
+  document.getElementById('cavalo-avulso-placa').value = '';
+  document.getElementById('cavalo-avulso-doca-numero').value = '';
+  document.getElementById('cavalo-avulso-outro-texto').value = '';
+  document.getElementById('cavalo-avulso-doca-wrap').style.display = 'none';
+  document.getElementById('cavalo-avulso-outro-wrap').style.display = 'none';
+  document.getElementById('cavalo-avulso-aviso').innerHTML = '';
+  selecaoCavaloAvulsoLocalizacao = null;
+  document.querySelectorAll('#cavalo-avulso-localizacao .opcao-btn').forEach((b) => b.classList.remove('selecionado'));
+  abrirOverlay('overlay-cavalo-avulso');
+}
+
+function ligarModalCavaloAvulso() {
+  const placaInput = document.getElementById('cavalo-avulso-placa');
+  placaInput.addEventListener('input', async () => {
+    placaInput.value = normalizarPlaca(placaInput.value);
+    const avisoEl = document.getElementById('cavalo-avulso-aviso');
+    avisoEl.innerHTML = '';
+    if (placaInput.value.length < 6) return;
+    const conflito = await encontrarCarretaComCavalo(placaInput.value, null);
+    if (conflito) {
+      avisoEl.innerHTML = `<div class="aviso-box">Este cavalo já está vinculado à carreta ${conflito.placa}.</div>`;
+    }
+  });
+
+  configurarPickerLocalizacao(
+    'cavalo-avulso-localizacao',
+    'cavalo-avulso-doca-wrap',
+    'cavalo-avulso-outro-wrap',
+    (valor) => {
+      selecaoCavaloAvulsoLocalizacao = valor;
+    }
+  );
+
+  document.getElementById('btn-confirmar-cavalo-avulso').addEventListener('click', async () => {
+    const placa = normalizarPlaca(document.getElementById('cavalo-avulso-placa').value);
+    if (!placa) {
+      toast('Informe a placa do cavalo.');
+      return;
+    }
+    const conflito = await encontrarCarretaComCavalo(placa, null);
+    if (conflito) {
+      toast(`Este cavalo já está vinculado à carreta ${conflito.placa}.`);
+      return;
+    }
+    if (!selecaoCavaloAvulsoLocalizacao) {
+      toast('Selecione a localização.');
+      return;
+    }
+    let docaNumero = '';
+    if (selecaoCavaloAvulsoLocalizacao === 'DOCA') {
+      docaNumero = normalizarPlaca(document.getElementById('cavalo-avulso-doca-numero').value);
+      if (!docaNumero) {
+        toast('Informe o número da doca.');
+        return;
+      }
+    }
+    let outroTexto = '';
+    if (selecaoCavaloAvulsoLocalizacao === 'OUTRO') {
+      outroTexto = document.getElementById('cavalo-avulso-outro-texto').value.trim();
+      if (!outroTexto) {
+        toast('Descreva a localização.');
+        return;
+      }
+    }
+
+    const agora = Date.now();
+    const cavalo = {
+      placa,
+      localizacao: selecaoCavaloAvulsoLocalizacao,
+      doca: docaNumero,
+      localizacaoOutroTexto: outroTexto,
+      criadoEm: agora,
+      ultimaMovimentacaoTimestamp: agora,
+    };
+    await DB.cavaloAvulsoSalvar(cavalo);
+    await DB.movimentacaoRegistrar({
+      placa,
+      tipo: TIPO_MOVIMENTO.CAVALO_AVULSO,
+      detalhe: `Cavalo no pátio — ${localizacaoTextoTela(cavalo)}`,
+      timestamp: agora,
+      doca: docaNumero,
+    });
+
+    fecharOverlay('overlay-cavalo-avulso');
+    toast('Cavalo registrado.');
+    await atualizarTudo();
+  });
+}
+
+async function acaoRemoverCavaloAvulso(placa) {
+  abrirConfirm('Remover do Pátio', `Remover o cavalo ${placa} do pátio?`, async () => {
+    await DB.cavaloAvulsoExcluir(placa);
+    await DB.movimentacaoRegistrar({
+      placa,
+      tipo: TIPO_MOVIMENTO.CAVALO_AVULSO,
+      detalhe: 'Removido do pátio',
+      timestamp: Date.now(),
+      doca: '',
+    });
+    fecharOverlay('overlay-detalhes');
+    toast('Cavalo removido.');
+    await atualizarTudo();
+  });
 }
 
 /* ============================================================
@@ -894,8 +1219,6 @@ async function renderHistorico() {
 
   if (filtroHistoricoAtivo === 'HOJE') {
     movs = movs.filter((m) => ehHoje(m.timestamp));
-  } else if (filtroHistoricoAtivo === 'ONTEM') {
-    movs = movs.filter((m) => ehOntem(m.timestamp));
   }
 
   if (filtroHistoricoPlaca) {
@@ -916,69 +1239,77 @@ async function renderHistorico() {
       <div class="hora">${formatarHora(m.timestamp)}</div>
       <div class="conteudo">
         <div class="placa">${m.placa}</div>
-        <div class="descricao">${m.detalhe || TIPO_MOVIMENTO_LABEL[m.tipo] || m.tipo}</div>
+        <div class="descricao">${m.detalhe || m.tipo}</div>
       </div>
     `;
-    div.addEventListener('click', () => abrirDetalhes(m.placa));
+    div.addEventListener('click', async () => {
+      const carreta = await DB.carretaBuscarPorPlaca(m.placa);
+      if (carreta) {
+        abrirDetalhes(m.placa, 'carreta');
+      } else {
+        const cavalo = await DB.cavaloAvulsoBuscarPorPlaca(m.placa);
+        if (cavalo) abrirDetalhes(m.placa, 'cavalo');
+      }
+    });
     container.appendChild(div);
   });
 }
 
 /* ============================================================
-   PASSAGEM DE TURNO
+   ATUALIZAÇÃO PÁTIO
    ============================================================ */
 
-function ligarTurno() {
-  document.getElementById('btn-copiar-resumo').addEventListener('click', async () => {
-    const texto = document.getElementById('resumo-turno-texto').textContent;
+function ligarAtualizacaoPatio() {
+  document.getElementById('btn-copiar-atualizacao').addEventListener('click', async () => {
+    const texto = document.getElementById('resumo-atualizacao-texto').textContent;
     const ok = await copiarParaAreaTransferencia(texto);
-    toast(ok ? 'Resumo copiado.' : 'Não foi possível copiar.');
+    toast(ok ? 'Atualização copiada.' : 'Não foi possível copiar.');
   });
 }
 
-async function renderResumoTurno() {
+async function renderAtualizacaoPatio() {
   const carretas = await DB.carretaListarTodas();
-  const noPatio = carretas.filter((c) => c.status !== STATUS.FORA_DO_PATIO);
-  const disponiveis = noPatio.filter((c) => c.status === STATUS.DISPONIVEL);
-  const naDoca = noPatio.filter((c) => c.status === STATUS.NA_DOCA);
-  const aguardando = noPatio.filter((c) => c.status === STATUS.AGUARDANDO);
-  const indisponiveis = noPatio.filter((c) => c.status === STATUS.INDISPONIVEL);
-  const chegadasHoje = carretas.filter((c) => c.chegadaTimestamp && ehHoje(c.chegadaTimestamp));
-  const saidasHoje = carretas.filter(
-    (c) => c.status === STATUS.FORA_DO_PATIO && c.saidaTimestamp && ehHoje(c.saidaTimestamp)
-  );
+  const ativas = carretas.filter((c) => c.presente);
+  const cavalosAvulsos = await DB.cavaloAvulsoListarTodos();
 
-  const agora = Date.now();
-  const linhas = [];
-  linhas.push('LEMAR — CONTROLE DE PÁTIO');
-  if (configUnidade) linhas.push(configUnidade);
-  linhas.push(formatarDataHora(agora));
-  linhas.push('');
-  linhas.push(`Carretas no pátio: ${noPatio.length}`);
-  linhas.push(`Disponíveis: ${disponiveis.length}`);
-  linhas.push(`Na doca: ${naDoca.length}`);
-  linhas.push(`Aguardando: ${aguardando.length}`);
-  linhas.push(`Indisponíveis: ${indisponiveis.length}`);
-  linhas.push(`Entradas do dia: ${chegadasHoje.length}`);
-  linhas.push(`Saídas do dia: ${saidasHoje.length}`);
+  const linhaComCavalo = (c) => `${c.placa} com cavalo ${c.placaCavalo} ${localizacaoTextoMensagem(c)}`;
+  const linhaSemCavalo = (c) => `${c.placa} ${localizacaoTextoMensagem(c)}`;
+  const linhaInsumo = (c) => `${c.placa} ${(c.insumoDetalhe || 'insumos').toLowerCase()}`;
+  const linhaCavaloAvulso = (c) => `${c.placa} ${localizacaoTextoMensagem(c)}`;
 
-  if (indisponiveis.length > 0) {
+  const secoes = [
+    ['Carretas vazias com cavalo', ativas.filter((c) => c.situacao === 'VAZIA' && c.temCavalo).map(linhaComCavalo)],
+    ['Carretas vazias sem cavalo', ativas.filter((c) => c.situacao === 'VAZIA' && !c.temCavalo).map(linhaSemCavalo)],
+    [
+      'Carretas carregadas com cavalo',
+      ativas.filter((c) => c.situacao === 'CARREGADA' && c.temCavalo).map(linhaComCavalo),
+    ],
+    [
+      'Carretas carregadas sem cavalo',
+      ativas.filter((c) => c.situacao === 'CARREGADA' && !c.temCavalo).map(linhaSemCavalo),
+    ],
+    [
+      'Carretas carregando sem cavalo',
+      ativas.filter((c) => c.situacao === 'CARREGANDO' && !c.temCavalo).map(linhaSemCavalo),
+    ],
+    [
+      'Carretas carregando com cavalo',
+      ativas.filter((c) => c.situacao === 'CARREGANDO' && c.temCavalo).map(linhaComCavalo),
+    ],
+    ['Carretas com insumos', ativas.filter((c) => c.situacao === 'INSUMOS').map(linhaInsumo)],
+    ['Cavalo no pátio', cavalosAvulsos.map(linhaCavaloAvulso)],
+  ];
+
+  const linhas = ['Atualização Pátio', ''];
+  secoes.forEach(([titulo, itens]) => {
+    if (itens.length === 0) return;
+    linhas.push(titulo);
+    linhas.push(...itens);
     linhas.push('');
-    linhas.push('CARRETAS INDISPONÍVEIS');
-    indisponiveis.forEach((c) => {
-      linhas.push(`${c.placa} — ${c.motivoIndisponivel || 'Sem motivo informado'}`);
-    });
-  }
+  });
+  while (linhas.length && linhas[linhas.length - 1] === '') linhas.pop();
 
-  if (naDoca.length > 0) {
-    linhas.push('');
-    linhas.push('CARRETAS EM DOCA');
-    naDoca.forEach((c) => {
-      linhas.push(`${c.placa} — Doca ${c.doca}`);
-    });
-  }
-
-  document.getElementById('resumo-turno-texto').textContent = linhas.join('\n');
+  document.getElementById('resumo-atualizacao-texto').textContent = linhas.join('\n');
 }
 
 /* ============================================================

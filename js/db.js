@@ -1,9 +1,10 @@
 /* LEMAR Controle de Pátio — camada de dados (IndexedDB) */
 
 const DB_NAME = 'lemarPatioDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 const STORE_CARRETAS = 'carretas';
+const STORE_CAVALOS_AVULSOS = 'cavalosAvulsos';
 const STORE_MOVIMENTACOES = 'movimentacoes';
 const STORE_CONFIG = 'config';
 
@@ -20,9 +21,14 @@ function abrirBanco() {
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
 
-      if (!db.objectStoreNames.contains(STORE_CARRETAS)) {
-        const carretas = db.createObjectStore(STORE_CARRETAS, { keyPath: 'placa' });
-        carretas.createIndex('status', 'status', { unique: false });
+      if (db.objectStoreNames.contains(STORE_CARRETAS)) {
+        db.deleteObjectStore(STORE_CARRETAS);
+      }
+      const carretas = db.createObjectStore(STORE_CARRETAS, { keyPath: 'placa' });
+      carretas.createIndex('presente', 'presente', { unique: false });
+
+      if (!db.objectStoreNames.contains(STORE_CAVALOS_AVULSOS)) {
+        db.createObjectStore(STORE_CAVALOS_AVULSOS, { keyPath: 'placa' });
       }
 
       if (!db.objectStoreNames.contains(STORE_MOVIMENTACOES)) {
@@ -83,10 +89,39 @@ async function carretaListarTodas() {
   });
 }
 
-async function carretaExcluir(placa) {
-  const tx = await transacao(STORE_CARRETAS, 'readwrite');
+/* ---------- CAVALOS AVULSOS ---------- */
+
+async function cavaloAvulsoSalvar(cavalo) {
+  const tx = await transacao(STORE_CAVALOS_AVULSOS, 'readwrite');
   return new Promise((resolve, reject) => {
-    const req = tx.objectStore(STORE_CARRETAS).delete(placa);
+    const req = tx.objectStore(STORE_CAVALOS_AVULSOS).put(cavalo);
+    req.onsuccess = () => resolve(cavalo);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function cavaloAvulsoBuscarPorPlaca(placa) {
+  const tx = await transacao(STORE_CAVALOS_AVULSOS, 'readonly');
+  return new Promise((resolve, reject) => {
+    const req = tx.objectStore(STORE_CAVALOS_AVULSOS).get(placa);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function cavaloAvulsoListarTodos() {
+  const tx = await transacao(STORE_CAVALOS_AVULSOS, 'readonly');
+  return new Promise((resolve, reject) => {
+    const req = tx.objectStore(STORE_CAVALOS_AVULSOS).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function cavaloAvulsoExcluir(placa) {
+  const tx = await transacao(STORE_CAVALOS_AVULSOS, 'readwrite');
+  return new Promise((resolve, reject) => {
+    const req = tx.objectStore(STORE_CAVALOS_AVULSOS).delete(placa);
     req.onsuccess = () => resolve();
     req.onerror = (e) => reject(e.target.error);
   });
@@ -108,16 +143,6 @@ async function movimentacaoListarTodas() {
   return new Promise((resolve, reject) => {
     const req = tx.objectStore(STORE_MOVIMENTACOES).getAll();
     req.onsuccess = () => resolve((req.result || []).sort((a, b) => b.timestamp - a.timestamp));
-    req.onerror = (e) => reject(e.target.error);
-  });
-}
-
-async function movimentacaoListarPorPlaca(placa) {
-  const tx = await transacao(STORE_MOVIMENTACOES, 'readonly');
-  return new Promise((resolve, reject) => {
-    const idx = tx.objectStore(STORE_MOVIMENTACOES).index('placa');
-    const req = idx.getAll(placa);
-    req.onsuccess = () => resolve((req.result || []).sort((a, b) => a.timestamp - b.timestamp));
     req.onerror = (e) => reject(e.target.error);
   });
 }
@@ -154,8 +179,9 @@ async function configListarTodas() {
 /* ---------- BACKUP / RESTAURAÇÃO ---------- */
 
 async function backupExportarDados() {
-  const [carretas, movimentacoes, config] = await Promise.all([
+  const [carretas, cavalosAvulsos, movimentacoes, config] = await Promise.all([
     carretaListarTodas(),
+    cavaloAvulsoListarTodos(),
     movimentacaoListarTodas(),
     configListarTodas(),
   ]);
@@ -164,6 +190,7 @@ async function backupExportarDados() {
     versao: DB_VERSION,
     geradoEm: Date.now(),
     carretas,
+    cavalosAvulsos,
     movimentacoes,
     config,
   };
@@ -184,7 +211,7 @@ async function backupRestaurarDados(dados) {
   }
   const db = await abrirBanco();
   const tx = db.transaction(
-    [STORE_CARRETAS, STORE_MOVIMENTACOES, STORE_CONFIG],
+    [STORE_CARRETAS, STORE_CAVALOS_AVULSOS, STORE_MOVIMENTACOES, STORE_CONFIG],
     'readwrite'
   );
 
@@ -193,14 +220,17 @@ async function backupRestaurarDados(dados) {
     tx.onerror = (e) => reject(e.target.error);
 
     const carretasStore = tx.objectStore(STORE_CARRETAS);
+    const cavalosStore = tx.objectStore(STORE_CAVALOS_AVULSOS);
     const movStore = tx.objectStore(STORE_MOVIMENTACOES);
     const configStore = tx.objectStore(STORE_CONFIG);
 
     carretasStore.clear();
+    cavalosStore.clear();
     movStore.clear();
     configStore.clear();
 
     dados.carretas.forEach((c) => carretasStore.put(c));
+    (dados.cavalosAvulsos || []).forEach((c) => cavalosStore.put(c));
     dados.movimentacoes.forEach((m) => movStore.put(m));
     dados.config.forEach((c) => configStore.put(c));
   });
@@ -210,10 +240,12 @@ const DB = {
   carretaSalvar,
   carretaBuscarPorPlaca,
   carretaListarTodas,
-  carretaExcluir,
+  cavaloAvulsoSalvar,
+  cavaloAvulsoBuscarPorPlaca,
+  cavaloAvulsoListarTodos,
+  cavaloAvulsoExcluir,
   movimentacaoRegistrar,
   movimentacaoListarTodas,
-  movimentacaoListarPorPlaca,
   configSalvar,
   configBuscar,
   configListarTodas,

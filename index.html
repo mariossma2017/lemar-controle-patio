@@ -31,62 +31,63 @@
   <section class="tela ativa" id="tela-home">
 
     <div class="busca-wrap">
-      <input type="text" class="busca-input" id="busca-input" placeholder="Digite a placa..." autocomplete="off" />
+      <input type="text" class="busca-input" id="busca-input" placeholder="Buscar por placa (carreta ou cavalo)..." autocomplete="off" />
       <div class="busca-resultados" id="busca-resultados"></div>
     </div>
 
     <div class="stats-grid" id="stats-grid">
       <div class="stat-card destaque">
-        <div class="valor" id="stat-no-patio">0</div>
-        <div class="rotulo">No Pátio</div>
+        <div class="valor" id="stat-total-patio">0</div>
+        <div class="rotulo">Total no Pátio</div>
       </div>
       <div class="stat-card">
-        <div class="valor" id="stat-disponiveis">0</div>
-        <div class="rotulo">Disponíveis</div>
+        <div class="valor" id="stat-em-doca">0</div>
+        <div class="rotulo">Em Doca</div>
       </div>
       <div class="stat-card">
-        <div class="valor" id="stat-na-doca">0</div>
-        <div class="rotulo">Na Doca</div>
+        <div class="valor" id="stat-vazias">0</div>
+        <div class="rotulo">Vazias</div>
       </div>
       <div class="stat-card">
-        <div class="valor" id="stat-aguardando">0</div>
-        <div class="rotulo">Aguardando</div>
+        <div class="valor" id="stat-carregadas">0</div>
+        <div class="rotulo">Carregadas</div>
       </div>
       <div class="stat-card">
-        <div class="valor" id="stat-indisponiveis">0</div>
-        <div class="rotulo">Indisponíveis</div>
+        <div class="valor" id="stat-carregando">0</div>
+        <div class="rotulo">Carregando</div>
       </div>
       <div class="stat-card">
-        <div class="valor" id="stat-chegadas-hoje">0</div>
-        <div class="rotulo">Chegadas Hoje</div>
+        <div class="valor" id="stat-insumos">0</div>
+        <div class="rotulo">Com Insumos</div>
       </div>
-      <div class="stat-card" style="grid-column: span 2;">
-        <div class="valor" id="stat-saidas-hoje">0</div>
-        <div class="rotulo">Saídas Hoje</div>
+      <div class="stat-card">
+        <div class="valor" id="stat-com-cavalo">0</div>
+        <div class="rotulo">Com Cavalo</div>
+      </div>
+      <div class="stat-card">
+        <div class="valor" id="stat-sem-cavalo">0</div>
+        <div class="rotulo">Sem Cavalo</div>
       </div>
     </div>
 
     <div class="acoes-principais">
-      <button class="btn btn-primario" id="btn-registrar-chegada">➕ REGISTRAR CHEGADA</button>
-      <button class="btn btn-secundario" id="btn-registrar-saida">🚚 REGISTRAR SAÍDA</button>
+      <button class="btn btn-primario" id="btn-nova-chegada">➕ NOVA CHEGADA</button>
       <button class="btn btn-outline" id="btn-ver-patio">📋 VER PÁTIO</button>
+      <button class="btn btn-secundario" id="btn-atualizacao-patio">📤 ATUALIZAÇÃO PÁTIO</button>
+      <button class="btn btn-outline" id="btn-cadastro-carreta">🗂️ CADASTRO DA CARRETA</button>
     </div>
 
   </section>
 
   <!-- ===================== TELA PÁTIO ===================== -->
   <section class="tela" id="tela-patio">
-    <div class="secao-titulo">Disponíveis</div>
-    <div class="lista-cards" id="lista-disponiveis"></div>
+    <button class="btn btn-outline btn-bloco" id="btn-cavalo-no-patio" style="margin-bottom: 18px;">🐴 CAVALO NO PÁTIO</button>
 
-    <div class="secao-titulo">Na Doca</div>
-    <div class="lista-cards" id="lista-na-doca"></div>
+    <div class="secao-titulo">Carretas no Pátio</div>
+    <div class="lista-cards" id="lista-carretas-patio"></div>
 
-    <div class="secao-titulo">Aguardando</div>
-    <div class="lista-cards" id="lista-aguardando"></div>
-
-    <div class="secao-titulo">Indisponíveis</div>
-    <div class="lista-cards" id="lista-indisponiveis"></div>
+    <div class="secao-titulo">Cavalos no Pátio</div>
+    <div class="lista-cards" id="lista-cavalos-patio"></div>
   </section>
 
   <!-- ===================== TELA DOCAS ===================== -->
@@ -97,26 +98,25 @@
 
   <!-- ===================== TELA HISTÓRICO ===================== -->
   <section class="tela" id="tela-historico">
-    <div class="secao-titulo">Movimentações</div>
+    <div class="secao-titulo">Histórico de Hoje</div>
 
     <div class="filtros-historico" id="filtros-historico">
       <button class="filtro-chip ativo" data-filtro="HOJE">Hoje</button>
-      <button class="filtro-chip" data-filtro="ONTEM">Ontem</button>
       <button class="filtro-chip" data-filtro="TODAS">Todas</button>
     </div>
 
-    <input type="text" class="filtro-busca-placa" id="filtro-busca-placa" placeholder="Filtrar por placa..." />
+    <input type="text" class="filtro-busca-placa" id="filtro-busca-placa" placeholder="Buscar por placa..." />
 
     <div id="lista-historico"></div>
   </section>
 
-  <!-- ===================== TELA TURNO ===================== -->
-  <section class="tela" id="tela-turno">
-    <div class="secao-titulo">Passagem de Turno</div>
+  <!-- ===================== TELA ATUALIZAÇÃO PÁTIO ===================== -->
+  <section class="tela" id="tela-atualizacao">
+    <div class="secao-titulo">Atualização Pátio</div>
     <div class="resumo-turno-box">
-      <div class="resumo-turno-texto" id="resumo-turno-texto">Carregando resumo...</div>
+      <div class="resumo-turno-texto" id="resumo-atualizacao-texto">Carregando atualização...</div>
     </div>
-    <button class="btn btn-primario" id="btn-copiar-resumo">📋 COPIAR RESUMO</button>
+    <button class="btn btn-primario" id="btn-copiar-atualizacao">📋 COPIAR ATUALIZAÇÃO</button>
   </section>
 
   <!-- ===================== TELA CONFIG ===================== -->
@@ -141,7 +141,7 @@
     <div class="config-grupo">
       <label>Aplicativo</label>
       <button class="btn btn-primario btn-bloco" id="btn-instalar-app">📲 INSTALAR APLICATIVO</button>
-      <div class="config-versao">LEMAR Controle de Pátio — v1.0.0</div>
+      <div class="config-versao">LEMAR Controle de Pátio — v2.0.0</div>
     </div>
   </section>
 
@@ -152,16 +152,17 @@
   <button data-tela="tela-patio"><span class="icone">📋</span>Pátio</button>
   <button data-tela="tela-docas"><span class="icone">🚪</span>Docas</button>
   <button data-tela="tela-historico"><span class="icone">🕒</span>Histórico</button>
-  <button data-tela="tela-turno"><span class="icone">📝</span>Turno</button>
+  <button data-tela="tela-atualizacao"><span class="icone">📤</span>Atualização</button>
   <button data-tela="tela-config"><span class="icone">⚙️</span>Config</button>
 </nav>
 
 <!-- ===================== OVERLAY / MODAIS ===================== -->
 
+<!-- ---------- NOVA CHEGADA / CADASTRO DA CARRETA ---------- -->
 <div class="overlay" id="overlay-chegada">
   <div class="modal">
     <div class="modal-header">
-      <h2>Registrar Chegada</h2>
+      <h2 id="chegada-titulo">Nova Chegada</h2>
       <button class="modal-fechar" data-fechar="overlay-chegada">&times;</button>
     </div>
 
@@ -173,93 +174,71 @@
     </div>
 
     <div class="form-grupo">
-      <label for="chegada-placa-cavalo">Placa do Cavalo <span class="opcional">(opcional)</span></label>
-      <input type="text" class="input-placa" id="chegada-placa-cavalo" placeholder="XYZ9A87" maxlength="8" />
-    </div>
-
-    <div class="form-grupo">
-      <label for="chegada-motorista">Motorista <span class="opcional">(opcional)</span></label>
-      <input type="text" id="chegada-motorista" placeholder="Nome do motorista" />
-    </div>
-
-    <div class="form-grupo">
-      <label>Condição</label>
-      <div class="opcoes-grid" id="chegada-condicao">
+      <label>Situação</label>
+      <div class="opcoes-grid" id="chegada-situacao">
         <button type="button" class="opcao-btn" data-valor="VAZIA">VAZIA</button>
         <button type="button" class="opcao-btn" data-valor="CARREGADA">CARREGADA</button>
+        <button type="button" class="opcao-btn" data-valor="CARREGANDO">CARREGANDO</button>
+        <button type="button" class="opcao-btn" data-valor="INSUMOS">INSUMOS</button>
       </div>
     </div>
 
+    <div class="form-grupo" id="chegada-insumo-wrap" style="display:none;">
+      <label>Insumos <span class="opcional">(opcional)</span></label>
+      <div class="opcoes-grid tres" id="chegada-insumo-opcoes">
+        <button type="button" class="opcao-btn" data-valor="Paletes">PALETES</button>
+        <button type="button" class="opcao-btn" data-valor="Caixa amarela">CAIXA AMARELA</button>
+        <button type="button" class="opcao-btn" data-valor="OUTRO">OUTRO</button>
+      </div>
+      <input type="text" id="chegada-insumo-outro-texto" placeholder="Descreva o insumo..." style="display:none; margin-top: 10px;" />
+    </div>
+
     <div class="form-grupo">
-      <label>Localização Inicial</label>
-      <div class="opcoes-grid tres" id="chegada-localizacao">
+      <label>Está com Cavalo?</label>
+      <div class="opcoes-grid" id="chegada-tem-cavalo">
+        <button type="button" class="opcao-btn" data-valor="SIM">SIM</button>
+        <button type="button" class="opcao-btn" data-valor="NAO">NÃO</button>
+      </div>
+    </div>
+
+    <div class="form-grupo" id="chegada-placa-cavalo-wrap" style="display:none;">
+      <label for="chegada-placa-cavalo">Placa do Cavalo</label>
+      <input type="text" class="input-placa" id="chegada-placa-cavalo" placeholder="XYZ9A87" maxlength="8" />
+      <div id="chegada-aviso-cavalo"></div>
+    </div>
+
+    <div class="form-grupo">
+      <label>Localização</label>
+      <div class="opcoes-grid" id="chegada-localizacao">
         <button type="button" class="opcao-btn" data-valor="PATIO">PÁTIO</button>
         <button type="button" class="opcao-btn" data-valor="DOCA">DOCA</button>
-        <button type="button" class="opcao-btn" data-valor="AGUARDANDO">AGUARDANDO</button>
+        <button type="button" class="opcao-btn" data-valor="DOCA_MORTA">DOCA MORTA</button>
+        <button type="button" class="opcao-btn" data-valor="LATERAL">LATERAL</button>
+        <button type="button" class="opcao-btn" data-valor="OBLIQUO">OBLÍQUO</button>
+        <button type="button" class="opcao-btn" data-valor="LATERAL_OBLIQUO">LATERAL OBLÍQUO</button>
+        <button type="button" class="opcao-btn" data-valor="BOLSAO">BOLSÃO</button>
+        <button type="button" class="opcao-btn" data-valor="OUTRO">OUTRO</button>
       </div>
     </div>
 
     <div class="form-grupo" id="chegada-doca-wrap" style="display:none;">
       <label for="chegada-doca-numero">Número da Doca</label>
-      <input type="text" id="chegada-doca-numero" placeholder="Ex: 03" />
+      <input type="text" id="chegada-doca-numero" placeholder="Ex: 12" />
     </div>
 
-    <div class="form-grupo">
-      <label for="chegada-obs">Observação <span class="opcional">(opcional)</span></label>
-      <textarea class="input-obs" id="chegada-obs" placeholder="Observação..."></textarea>
+    <div class="form-grupo" id="chegada-localizacao-outro-wrap" style="display:none;">
+      <label for="chegada-localizacao-outro-texto">Descreva a Localização</label>
+      <input type="text" id="chegada-localizacao-outro-texto" placeholder="Localização..." />
     </div>
 
     <div class="form-acoes">
       <button class="btn btn-outline" data-fechar="overlay-chegada">CANCELAR</button>
-      <button class="btn btn-primario" id="btn-confirmar-chegada">CONFIRMAR CHEGADA</button>
+      <button class="btn btn-primario" id="btn-confirmar-chegada">SALVAR</button>
     </div>
   </div>
 </div>
 
-<div class="overlay" id="overlay-saida">
-  <div class="modal">
-    <div class="modal-header">
-      <h2>Registrar Saída</h2>
-      <button class="modal-fechar" data-fechar="overlay-saida">&times;</button>
-    </div>
-
-    <div id="saida-aviso"></div>
-
-    <div class="form-grupo">
-      <label for="saida-placa">Placa da Carreta</label>
-      <input type="text" class="input-placa" id="saida-placa" placeholder="ABC1D23" maxlength="8" />
-    </div>
-
-    <div class="form-grupo">
-      <label>Condição</label>
-      <div class="opcoes-grid" id="saida-condicao">
-        <button type="button" class="opcao-btn" data-valor="VAZIA">VAZIA</button>
-        <button type="button" class="opcao-btn" data-valor="CARREGADA">CARREGADA</button>
-      </div>
-    </div>
-
-    <div class="form-grupo">
-      <label for="saida-placa-cavalo">Placa do Cavalo <span class="opcional">(opcional)</span></label>
-      <input type="text" class="input-placa" id="saida-placa-cavalo" placeholder="XYZ9A87" maxlength="8" />
-    </div>
-
-    <div class="form-grupo">
-      <label for="saida-motorista">Motorista <span class="opcional">(opcional)</span></label>
-      <input type="text" id="saida-motorista" placeholder="Nome do motorista" />
-    </div>
-
-    <div class="form-grupo">
-      <label for="saida-destino">Destino <span class="opcional">(opcional)</span></label>
-      <input type="text" id="saida-destino" placeholder="Destino da carga" />
-    </div>
-
-    <div class="form-acoes">
-      <button class="btn btn-outline" data-fechar="overlay-saida">CANCELAR</button>
-      <button class="btn btn-secundario" id="btn-confirmar-saida">CONFIRMAR SAÍDA</button>
-    </div>
-  </div>
-</div>
-
+<!-- ---------- DETALHES / AÇÕES RÁPIDAS ---------- -->
 <div class="overlay" id="overlay-detalhes">
   <div class="modal">
     <div class="modal-header">
@@ -271,67 +250,137 @@
   </div>
 </div>
 
-<div class="overlay" id="overlay-doca-numero">
+<!-- ---------- ALTERAR SITUAÇÃO ---------- -->
+<div class="overlay" id="overlay-alterar-situacao">
   <div class="modal">
     <div class="modal-header">
-      <h2>Mandar para Doca</h2>
-      <button class="modal-fechar" data-fechar="overlay-doca-numero">&times;</button>
+      <h2>Alterar Situação</h2>
+      <button class="modal-fechar" data-fechar="overlay-alterar-situacao">&times;</button>
     </div>
     <div class="form-grupo">
-      <label for="doca-numero-input">Número da Doca</label>
-      <input type="text" id="doca-numero-input" placeholder="Ex: 03" />
+      <label>Situação</label>
+      <div class="opcoes-grid" id="alterar-situacao-opcoes">
+        <button type="button" class="opcao-btn" data-valor="VAZIA">VAZIA</button>
+        <button type="button" class="opcao-btn" data-valor="CARREGADA">CARREGADA</button>
+        <button type="button" class="opcao-btn" data-valor="CARREGANDO">CARREGANDO</button>
+        <button type="button" class="opcao-btn" data-valor="INSUMOS">INSUMOS</button>
+      </div>
+    </div>
+    <div class="form-grupo" id="alterar-situacao-insumo-wrap" style="display:none;">
+      <label>Insumos <span class="opcional">(opcional)</span></label>
+      <div class="opcoes-grid tres" id="alterar-situacao-insumo-opcoes">
+        <button type="button" class="opcao-btn" data-valor="Paletes">PALETES</button>
+        <button type="button" class="opcao-btn" data-valor="Caixa amarela">CAIXA AMARELA</button>
+        <button type="button" class="opcao-btn" data-valor="OUTRO">OUTRO</button>
+      </div>
+      <input type="text" id="alterar-situacao-insumo-outro-texto" placeholder="Descreva o insumo..." style="display:none; margin-top: 10px;" />
     </div>
     <div class="form-acoes">
-      <button class="btn btn-outline" data-fechar="overlay-doca-numero">CANCELAR</button>
-      <button class="btn btn-primario" id="btn-confirmar-doca">CONFIRMAR</button>
+      <button class="btn btn-outline" data-fechar="overlay-alterar-situacao">CANCELAR</button>
+      <button class="btn btn-primario" id="btn-confirmar-alterar-situacao">SALVAR</button>
     </div>
   </div>
 </div>
 
-<div class="overlay" id="overlay-indisponivel">
+<!-- ---------- ALTERAR CAVALO ---------- -->
+<div class="overlay" id="overlay-alterar-cavalo">
   <div class="modal">
     <div class="modal-header">
-      <h2>Tornar Indisponível</h2>
-      <button class="modal-fechar" data-fechar="overlay-indisponivel">&times;</button>
+      <h2>Alterar Cavalo</h2>
+      <button class="modal-fechar" data-fechar="overlay-alterar-cavalo">&times;</button>
     </div>
     <div class="form-grupo">
-      <label>Motivo</label>
-      <div class="opcoes-grid" id="indisponivel-motivos">
-        <button type="button" class="opcao-btn" data-valor="PNEU">PNEU</button>
-        <button type="button" class="opcao-btn" data-valor="MANUTENÇÃO">MANUTENÇÃO</button>
-        <button type="button" class="opcao-btn" data-valor="AVARIA">AVARIA</button>
-        <button type="button" class="opcao-btn" data-valor="DOCUMENTAÇÃO">DOCUMENTAÇÃO</button>
+      <div class="opcoes-grid" id="alterar-cavalo-opcoes">
+        <button type="button" class="opcao-btn" data-valor="COM">COM CAVALO</button>
+        <button type="button" class="opcao-btn" data-valor="SEM">SEM CAVALO</button>
+      </div>
+    </div>
+    <div class="form-grupo" id="alterar-cavalo-placa-wrap" style="display:none;">
+      <label for="alterar-cavalo-placa">Placa do Cavalo</label>
+      <input type="text" class="input-placa" id="alterar-cavalo-placa" placeholder="XYZ9A87" maxlength="8" />
+      <div id="alterar-cavalo-aviso"></div>
+    </div>
+    <div class="form-acoes">
+      <button class="btn btn-outline" data-fechar="overlay-alterar-cavalo">CANCELAR</button>
+      <button class="btn btn-primario" id="btn-confirmar-alterar-cavalo">SALVAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- ---------- ALTERAR LOCALIZAÇÃO ---------- -->
+<div class="overlay" id="overlay-alterar-localizacao">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Alterar Localização</h2>
+      <button class="modal-fechar" data-fechar="overlay-alterar-localizacao">&times;</button>
+    </div>
+    <div class="form-grupo">
+      <div class="opcoes-grid" id="alterar-localizacao-opcoes">
+        <button type="button" class="opcao-btn" data-valor="PATIO">PÁTIO</button>
+        <button type="button" class="opcao-btn" data-valor="DOCA">DOCA</button>
+        <button type="button" class="opcao-btn" data-valor="DOCA_MORTA">DOCA MORTA</button>
+        <button type="button" class="opcao-btn" data-valor="LATERAL">LATERAL</button>
+        <button type="button" class="opcao-btn" data-valor="OBLIQUO">OBLÍQUO</button>
+        <button type="button" class="opcao-btn" data-valor="LATERAL_OBLIQUO">LATERAL OBLÍQUO</button>
+        <button type="button" class="opcao-btn" data-valor="BOLSAO">BOLSÃO</button>
         <button type="button" class="opcao-btn" data-valor="OUTRO">OUTRO</button>
       </div>
     </div>
-    <div class="form-grupo" id="indisponivel-outro-wrap" style="display:none;">
-      <label for="indisponivel-outro-texto">Descreva o motivo</label>
-      <input type="text" id="indisponivel-outro-texto" placeholder="Motivo..." />
+    <div class="form-grupo" id="alterar-localizacao-doca-wrap" style="display:none;">
+      <label for="alterar-localizacao-doca-numero">Número da Doca</label>
+      <input type="text" id="alterar-localizacao-doca-numero" placeholder="Ex: 12" />
+    </div>
+    <div class="form-grupo" id="alterar-localizacao-outro-wrap" style="display:none;">
+      <label for="alterar-localizacao-outro-texto">Descreva a Localização</label>
+      <input type="text" id="alterar-localizacao-outro-texto" placeholder="Localização..." />
     </div>
     <div class="form-acoes">
-      <button class="btn btn-outline" data-fechar="overlay-indisponivel">CANCELAR</button>
-      <button class="btn btn-perigo" id="btn-confirmar-indisponivel">CONFIRMAR</button>
+      <button class="btn btn-outline" data-fechar="overlay-alterar-localizacao">CANCELAR</button>
+      <button class="btn btn-primario" id="btn-confirmar-alterar-localizacao">SALVAR</button>
     </div>
   </div>
 </div>
 
+<!-- ---------- REGISTRAR SAÍDA ---------- -->
+<div class="overlay" id="overlay-saida">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Registrar Saída</h2>
+      <button class="modal-fechar" data-fechar="overlay-saida">&times;</button>
+    </div>
+    <div class="detalhes-linha">
+      <span class="rotulo">Carreta</span>
+      <span class="valor" id="saida-placa-texto">—</span>
+    </div>
+    <div class="detalhes-linha" id="saida-cavalo-linha" style="display:none;">
+      <span class="rotulo">Cavalo</span>
+      <span class="valor" id="saida-cavalo-texto">—</span>
+    </div>
+    <div class="form-grupo" style="margin-top: 16px;">
+      <label for="saida-destino">Destino <span class="opcional">(opcional)</span></label>
+      <input type="text" id="saida-destino" placeholder="Destino da carga" />
+    </div>
+    <div class="form-acoes">
+      <button class="btn btn-outline" data-fechar="overlay-saida">CANCELAR</button>
+      <button class="btn btn-secundario" id="btn-confirmar-saida">CONFIRMAR SAÍDA</button>
+    </div>
+  </div>
+</div>
+
+<!-- ---------- EDITAR ---------- -->
 <div class="overlay" id="overlay-editar">
   <div class="modal">
     <div class="modal-header">
       <h2>Editar Carreta</h2>
       <button class="modal-fechar" data-fechar="overlay-editar">&times;</button>
     </div>
-    <div class="form-grupo">
-      <label for="editar-placa-cavalo">Placa do Cavalo</label>
-      <input type="text" class="input-placa" id="editar-placa-cavalo" maxlength="8" />
+    <div class="form-grupo" id="editar-insumo-wrap" style="display:none;">
+      <label for="editar-insumo-texto">Detalhe do Insumo</label>
+      <input type="text" id="editar-insumo-texto" placeholder="Ex: Paletes" />
     </div>
-    <div class="form-grupo">
-      <label for="editar-motorista">Motorista</label>
-      <input type="text" id="editar-motorista" />
-    </div>
-    <div class="form-grupo">
-      <label for="editar-obs">Observação</label>
-      <textarea class="input-obs" id="editar-obs"></textarea>
+    <div class="form-grupo" id="editar-localizacao-outro-wrap" style="display:none;">
+      <label for="editar-localizacao-outro-texto">Descrição da Localização</label>
+      <input type="text" id="editar-localizacao-outro-texto" placeholder="Localização..." />
     </div>
     <div class="form-acoes">
       <button class="btn btn-outline" data-fechar="overlay-editar">CANCELAR</button>
@@ -340,6 +389,53 @@
   </div>
 </div>
 
+<!-- ---------- CAVALO NO PÁTIO (avulso) ---------- -->
+<div class="overlay" id="overlay-cavalo-avulso">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Cavalo no Pátio</h2>
+      <button class="modal-fechar" data-fechar="overlay-cavalo-avulso">&times;</button>
+    </div>
+
+    <div id="cavalo-avulso-aviso"></div>
+
+    <div class="form-grupo">
+      <label for="cavalo-avulso-placa">Placa do Cavalo</label>
+      <input type="text" class="input-placa" id="cavalo-avulso-placa" placeholder="XYZ9A87" maxlength="8" />
+    </div>
+
+    <div class="form-grupo">
+      <label>Localização</label>
+      <div class="opcoes-grid" id="cavalo-avulso-localizacao">
+        <button type="button" class="opcao-btn" data-valor="PATIO">PÁTIO</button>
+        <button type="button" class="opcao-btn" data-valor="DOCA">DOCA</button>
+        <button type="button" class="opcao-btn" data-valor="DOCA_MORTA">DOCA MORTA</button>
+        <button type="button" class="opcao-btn" data-valor="LATERAL">LATERAL</button>
+        <button type="button" class="opcao-btn" data-valor="OBLIQUO">OBLÍQUO</button>
+        <button type="button" class="opcao-btn" data-valor="LATERAL_OBLIQUO">LATERAL OBLÍQUO</button>
+        <button type="button" class="opcao-btn" data-valor="BOLSAO">BOLSÃO</button>
+        <button type="button" class="opcao-btn" data-valor="OUTRO">OUTRO</button>
+      </div>
+    </div>
+
+    <div class="form-grupo" id="cavalo-avulso-doca-wrap" style="display:none;">
+      <label for="cavalo-avulso-doca-numero">Número da Doca</label>
+      <input type="text" id="cavalo-avulso-doca-numero" placeholder="Ex: 45" />
+    </div>
+
+    <div class="form-grupo" id="cavalo-avulso-outro-wrap" style="display:none;">
+      <label for="cavalo-avulso-outro-texto">Descreva a Localização</label>
+      <input type="text" id="cavalo-avulso-outro-texto" placeholder="Localização..." />
+    </div>
+
+    <div class="form-acoes">
+      <button class="btn btn-outline" data-fechar="overlay-cavalo-avulso">CANCELAR</button>
+      <button class="btn btn-primario" id="btn-confirmar-cavalo-avulso">SALVAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- ---------- CONFIRMAÇÃO GENÉRICA ---------- -->
 <div class="overlay" id="overlay-confirm">
   <div class="modal">
     <div class="modal-header">

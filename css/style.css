@@ -356,49 +356,49 @@ main {
   white-space: nowrap;
 }
 
-.badge-disponivel {
+.badge-vazia {
   background: var(--cor-sucesso-bg);
   color: var(--cor-sucesso);
 }
 
-.badge-na_doca {
+.badge-carregada {
+  background: #e8e8ea;
+  color: var(--lemar-grafite);
+}
+
+.badge-carregando {
   background: #fff4cc;
   color: #8a6d00;
 }
 
-.badge-aguardando {
+.badge-insumos {
   background: var(--cor-neutro-bg);
   color: var(--cor-neutro);
 }
 
-.badge-indisponivel {
-  background: var(--cor-atencao-bg);
-  color: var(--cor-atencao);
+.badge-avulso {
+  background: #eef1fb;
+  color: #3b4a8a;
 }
 
-.badge-fora_do_patio {
-  background: #eeeeee;
-  color: #999999;
-}
-
-.card-carreta.borda-disponivel {
+.card-carreta.borda-vazia {
   border-left-color: var(--cor-sucesso);
 }
 
-.card-carreta.borda-na_doca {
+.card-carreta.borda-carregada {
+  border-left-color: var(--lemar-grafite);
+}
+
+.card-carreta.borda-carregando {
   border-left-color: var(--lemar-amarelo);
 }
 
-.card-carreta.borda-aguardando {
+.card-carreta.borda-insumos {
   border-left-color: var(--cor-neutro);
 }
 
-.card-carreta.borda-indisponivel {
-  border-left-color: var(--cor-atencao);
-}
-
-.card-carreta.borda-fora_do_patio {
-  border-left-color: #cccccc;
+.card-carreta.borda-avulso {
+  border-left-color: #3b4a8a;
 }
 
 .vazio-msg {
